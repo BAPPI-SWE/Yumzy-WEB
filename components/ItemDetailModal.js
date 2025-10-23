@@ -100,14 +100,13 @@ const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled
 export default function ItemDetailModal({ item, onClose }) {
   const [closeHovered, setCloseHovered] = useState(false);
   const [doneHovered, setDoneHovered] = useState(false);
-
-  if (!item) return null;
-
+  
+  // --- HOOKS MOVED HERE ---
   const { cart, addToCart, incrementItem, decrementItem } = useCart();
-  const isMultiVariant = item.variants && item.variants.length > 0;
-  const isEnabled = item.isEnabled;
+  const isMultiVariant = item?.variants && item.variants.length > 0;
 
   const totalQuantity = useMemo(() => {
+    if (!item) return 0; // Guard against null item
     if (!isMultiVariant) {
       return cart[item.id]?.quantity || 0;
     } else {
@@ -117,6 +116,12 @@ export default function ItemDetailModal({ item, onClose }) {
       }, 0);
     }
   }, [cart, item, isMultiVariant]);
+  // --- END OF MOVED HOOKS ---
+
+  if (!item) return null;
+
+  // This variable is safe to declare here as it's not a hook
+  const isEnabled = item.isEnabled;
 
   const createCartMenuItem = (variant = null) => {
     const id = variant ? `${item.id}_${variant.name}` : item.id;

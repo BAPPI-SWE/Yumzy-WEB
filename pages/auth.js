@@ -83,7 +83,7 @@ export default function AuthScreen() {
           fontSize: '18px',
           color: 'rgba(255, 255, 255, 0.9)'
         }}>
-          Let's satisfy those cravings together!
+          Let&apos;s satisfy those cravings together!
         </p>
         <div style={{
           marginTop: '32px',

@@ -496,7 +496,9 @@ function OrdersPage() {
               fontSize: '18px',
               fontWeight: 500,
               color: '#6B7280'
-            }}>You haven't placed any orders yet.</p>
+            }}>
+              You haven&apos;t placed any orders yet.
+            </p>
           </div>
         )}
 
