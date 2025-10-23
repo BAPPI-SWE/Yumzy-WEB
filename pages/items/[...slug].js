@@ -36,6 +36,8 @@ const getSortPrice = (item) => {
 
 // --- Item Card ---
 const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClick, isEnabled }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
   const displayPrice =
     item.variants && item.variants.length > 0
       ? `৳${Math.min(...item.variants.map((v) => v.price)).toFixed(0)} - ৳${Math.max(
@@ -47,44 +49,129 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
 
   return (
     <div
-      className={`bg-white rounded-lg shadow overflow-hidden flex flex-col ${
-        !isEnabled ? 'opacity-60' : 'cursor-pointer'
-      }`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        boxShadow: isHovered 
+          ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        opacity: !isEnabled ? 0.6 : 1,
+        cursor: isEnabled ? 'pointer' : 'default',
+        transition: 'all 0.2s'
+      }}
     >
-      <button onClick={onClick} disabled={!isEnabled} className="block w-full">
-        <div className="relative h-36 w-full bg-gray-200">
+      <button
+        onClick={onClick}
+        disabled={!isEnabled}
+        style={{
+          display: 'block',
+          width: '100%',
+          border: 'none',
+          padding: 0,
+          backgroundColor: 'transparent',
+          cursor: isEnabled ? 'pointer' : 'default'
+        }}
+      >
+        <div style={{ position: 'relative', height: '144px', width: '100%', backgroundColor: '#E5E7EB' }}>
           <img
             src={item.imageUrl || '/placeholder-image.png'}
             alt={item.name}
-            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
             loading="lazy"
           />
           {!isEnabled && (
-            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white p-2">
-              <NoSymbolIcon className="w-8 h-8 mb-1" />
-              <span className="text-xs font-bold text-center">
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              padding: '8px'
+            }}>
+              <NoSymbolIcon style={{ width: '32px', height: '32px', marginBottom: '4px' }} />
+              <span style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                textAlign: 'center'
+              }}>
                 {item.stock !== 'yes' ? 'Out of Stock' : 'Shop Closed'}
               </span>
             </div>
           )}
           {quantity > 0 && !isMultiVariant && (
-            <span className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-brandPink rounded-full shadow">
+            <span style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              fontSize: '12px',
+              fontWeight: 700,
+              color: 'white',
+              backgroundColor: '#DC0C25',
+              borderRadius: '9999px',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+            }}>
               {quantity}
             </span>
           )}
         </div>
       </button>
-      <div className="p-3 flex flex-col flex-1">
-        <p className="text-sm font-semibold text-gray-800 flex-1 min-h-[40px] leading-tight">{item.name}</p>
-        <div className="flex justify-between items-end mt-2">
-          <span className="text-base font-bold text-brandPink">{displayPrice}</span>
+      <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <p style={{
+          fontSize: '14px',
+          fontWeight: 600,
+          color: '#1F2937',
+          flex: 1,
+          minHeight: '40px',
+          lineHeight: '1.3',
+          overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical'
+        }}>
+          {item.name}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '8px' }}>
+          <span style={{ fontSize: '16px', fontWeight: 700, color: '#DC0C25' }}>{displayPrice}</span>
           {isMultiVariant ? (
             <button
               onClick={onClick}
               disabled={!isEnabled}
-              className="w-8 h-8 flex items-center justify-center bg-brandPink/10 text-brandPink rounded-full disabled:bg-gray-200 disabled:text-gray-400 transition hover:bg-brandPink/20"
+              style={{
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: !isEnabled ? '#E5E7EB' : 'rgba(220, 12, 37, 0.1)',
+                color: !isEnabled ? '#9CA3AF' : '#DC0C25',
+                borderRadius: '9999px',
+                border: 'none',
+                cursor: isEnabled ? 'pointer' : 'not-allowed',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => { if (isEnabled) e.currentTarget.style.backgroundColor = 'rgba(220, 12, 37, 0.2)'; }}
+              onMouseLeave={(e) => { if (isEnabled) e.currentTarget.style.backgroundColor = 'rgba(220, 12, 37, 0.1)'; }}
             >
-              <PlusIcon className="w-5 h-5" />
+              <PlusIcon style={{ width: '20px', height: '20px' }} />
             </button>
           ) : (
             <QuantitySelector
@@ -104,38 +191,87 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
 
 // --- Quantity Selector ---
 const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled, size = 'normal' }) => {
-  const buttonSize = size === 'small' ? 'w-7 h-7' : 'w-9 h-9';
-  const iconSize = size === 'small' ? 'w-4 h-4' : 'w-5 h-5';
-  const numberSize = size === 'small' ? 'text-sm' : 'text-base';
-  const space = size === 'small' ? 'space-x-1.5' : 'space-x-2.5';
+  const buttonSize = size === 'small' ? '28px' : '36px';
+  const iconSize = size === 'small' ? '16px' : '20px';
+  const numberSize = size === 'small' ? '14px' : '16px';
+  const space = size === 'small' ? '6px' : '10px';
 
   if (quantity === 0) {
     return (
       <button
         onClick={onAdd}
         disabled={!isEnabled}
-        className={`${buttonSize} flex items-center justify-center bg-brandPink text-white rounded-full disabled:bg-gray-300 transition hover:bg-opacity-90`}
+        style={{
+          width: buttonSize,
+          height: buttonSize,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: !isEnabled ? '#D1D5DB' : '#DC0C25',
+          color: 'white',
+          borderRadius: '9999px',
+          border: 'none',
+          cursor: isEnabled ? 'pointer' : 'not-allowed',
+          transition: 'opacity 0.2s'
+        }}
+        onMouseEnter={(e) => { if (isEnabled) e.currentTarget.style.opacity = '0.9'; }}
+        onMouseLeave={(e) => { if (isEnabled) e.currentTarget.style.opacity = '1'; }}
       >
-        <PlusIcon className={iconSize} />
+        <PlusIcon style={{ width: iconSize, height: iconSize }} />
       </button>
     );
   } else {
     return (
-      <div className={`flex items-center ${space}`}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: space }}>
         <button
           onClick={onDecrement}
           disabled={!isEnabled}
-          className={`${buttonSize} flex items-center justify-center bg-gray-200 text-gray-700 rounded-full disabled:bg-gray-300 transition hover:bg-gray-300`}
+          style={{
+            width: buttonSize,
+            height: buttonSize,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: !isEnabled ? '#D1D5DB' : '#E5E7EB',
+            color: '#374151',
+            borderRadius: '9999px',
+            border: 'none',
+            cursor: isEnabled ? 'pointer' : 'not-allowed',
+            transition: 'background-color 0.2s'
+          }}
+          onMouseEnter={(e) => { if (isEnabled) e.currentTarget.style.backgroundColor = '#D1D5DB'; }}
+          onMouseLeave={(e) => { if (isEnabled) e.currentTarget.style.backgroundColor = '#E5E7EB'; }}
         >
-          <MinusIcon className={iconSize} />
+          <MinusIcon style={{ width: iconSize, height: iconSize }} />
         </button>
-        <span className={`${numberSize} font-bold min-w-[16px] text-center`}>{quantity}</span>
+        <span style={{
+          fontSize: numberSize,
+          fontWeight: 700,
+          minWidth: '16px',
+          textAlign: 'center'
+        }}>
+          {quantity}
+        </span>
         <button
           onClick={onIncrement}
           disabled={!isEnabled}
-          className={`${buttonSize} flex items-center justify-center bg-brandPink text-white rounded-full disabled:bg-gray-300 transition hover:bg-opacity-90`}
+          style={{
+            width: buttonSize,
+            height: buttonSize,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: !isEnabled ? '#D1D5DB' : '#DC0C25',
+            color: 'white',
+            borderRadius: '9999px',
+            border: 'none',
+            cursor: isEnabled ? 'pointer' : 'not-allowed',
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => { if (isEnabled) e.currentTarget.style.opacity = '0.9'; }}
+          onMouseLeave={(e) => { if (isEnabled) e.currentTarget.style.opacity = '1'; }}
         >
-          <PlusIcon className={iconSize} />
+          <PlusIcon style={{ width: iconSize, height: iconSize }} />
         </button>
       </div>
     );
@@ -146,20 +282,55 @@ const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled
 const CartBottomBar = ({ onAddToCart, onPlaceOrder, totalItems }) => {
   if (totalItems === 0) return null;
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-50">
-      <div className="flex items-center space-x-4 max-w-lg mx-auto">
+    <div style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: 'white',
+      padding: '16px',
+      boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.1)',
+      zIndex: 50
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', maxWidth: '512px', margin: '0 auto' }}>
         <button
           onClick={onAddToCart}
-          className="p-3 border border-gray-300 rounded-lg text-brandPink hover:bg-gray-50"
+          style={{
+            padding: '12px',
+            border: '1px solid #D1D5DB',
+            borderRadius: '8px',
+            color: '#DC0C25',
+            backgroundColor: 'transparent',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           title="Save selections to main cart"
         >
-          <ShoppingCartIcon className="w-6 h-6" />
+          <ShoppingCartIcon style={{ width: '24px', height: '24px' }} />
         </button>
         <button
           onClick={onPlaceOrder}
-          className="flex-1 h-[50px] flex items-center justify-center bg-darkPink text-white rounded-lg text-base font-semibold transition hover:bg-opacity-90"
+          style={{
+            flex: 1,
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#B70314',
+            color: 'white',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: 600,
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
         >
-          <CheckCircleIcon className="w-5 h-5 mr-2" />
+          <CheckCircleIcon style={{ width: '20px', height: '20px', marginRight: '8px' }} />
           <span>Place Order Now ({totalItems})</span>
         </button>
       </div>
@@ -301,16 +472,57 @@ export default function ItemGridPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <div className="sticky top-0 z-30 bg-white shadow-sm p-3 flex items-center space-x-2">
-          <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-gray-100">
-            <ArrowLeftIcon className="w-6 h-6 text-gray-700" />
+      <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 30,
+          backgroundColor: 'white',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+          padding: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <button
+            onClick={() => router.back()}
+            style={{
+              padding: '8px',
+              borderRadius: '9999px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <ArrowLeftIcon style={{ width: '24px', height: '24px', color: '#374151' }} />
           </button>
-          <h1 className="text-lg font-bold text-gray-800 truncate flex-1">{pageTitle}</h1>
+          <h1 style={{
+            fontSize: '18px',
+            fontWeight: 700,
+            color: '#1F2937',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            flex: 1
+          }}>
+            {pageTitle}
+          </h1>
 
           <button
             onClick={handleSortClick}
-            className="p-2 rounded-full hover:bg-gray-100"
+            style={{
+              padding: '8px',
+              borderRadius: '9999px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             title={
               sortOrder === SortOrder.NONE
                 ? 'Sort by Price'
@@ -319,35 +531,40 @@ export default function ItemGridPage() {
                 : 'Sorted: High to Low'
             }
           >
-            {sortOrder === SortOrder.NONE && <ArrowsUpDownIcon className="w-6 h-6 text-gray-500" />}
-            {sortOrder === SortOrder.PRICE_LOW_TO_HIGH && <ArrowUpIcon className="w-6 h-6 text-brandPink" />}
-            {sortOrder === SortOrder.PRICE_HIGH_TO_LOW && <ArrowDownIcon className="w-6 h-6 text-brandPink" />}
+            {sortOrder === SortOrder.NONE && <ArrowsUpDownIcon style={{ width: '24px', height: '24px', color: '#6B7280' }} />}
+            {sortOrder === SortOrder.PRICE_LOW_TO_HIGH && <ArrowUpIcon style={{ width: '24px', height: '24px', color: '#DC0C25' }} />}
+            {sortOrder === SortOrder.PRICE_HIGH_TO_LOW && <ArrowDownIcon style={{ width: '24px', height: '24px', color: '#DC0C25' }} />}
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-24">
+        <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '96px' }}>
           {isLoading && (
-            <div className="flex justify-center items-center h-full">
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
               <LoadingSpinner />
             </div>
           )}
 
           {!isLoading && error && (
-            <div className="flex flex-col justify-center items-center h-full p-6 text-center">
-              <NoSymbolIcon className="w-12 h-12 text-red-400 mb-3" />
-              <p className="text-red-600">{error}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '24px', textAlign: 'center' }}>
+              <NoSymbolIcon style={{ width: '48px', height: '48px', color: '#F87171', marginBottom: '12px' }} />
+              <p style={{ color: '#DC2626' }}>{error}</p>
             </div>
           )}
 
           {!isLoading && !error && sortedItems.length === 0 && (
-            <div className="flex flex-col justify-center items-center h-full p-6 text-center">
-              <TagIcon className="w-12 h-12 text-gray-400 mb-3" />
-              <p className="text-gray-600">No items found.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '24px', textAlign: 'center' }}>
+              <TagIcon style={{ width: '48px', height: '48px', color: '#9CA3AF', marginBottom: '12px' }} />
+              <p style={{ color: '#4B5563' }}>No items found.</p>
             </div>
           )}
 
           {!isLoading && !error && sortedItems.length > 0 && (
-            <div className="grid grid-cols-2 gap-4 p-4">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '16px',
+              padding: '16px'
+            }}>
               {sortedItems.map((item) => {
                 let quantity = 0;
                 if (item.variants && item.variants.length > 0) {

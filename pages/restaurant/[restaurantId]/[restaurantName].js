@@ -1,160 +1,343 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { db } from '../../../firebase/config'; // Adjust path based on file location
+import { db } from '../../../firebase/config';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
-import { useCart } from '../../../context/CartContext'; // Adjust path
-import LoadingSpinner from '../../../components/LoadingSpinner'; // Adjust path
-import { ArrowLeftIcon, PlusIcon, MinusIcon, ShoppingCartIcon, CheckCircleIcon, ClockIcon, BuildingStorefrontIcon, ArrowRightIcon, ChevronRightIcon, BanknotesIcon } from '@heroicons/react/24/solid'; // Use solid icons for consistency
-import { SparklesIcon, FireIcon } from '@heroicons/react/24/outline'; // Outline for Blinking
+import { useCart } from '../../../context/CartContext';
+import LoadingSpinner from '../../../components/LoadingSpinner';
+import { ArrowLeftIcon, PlusIcon, MinusIcon, ShoppingCartIcon, CheckCircleIcon, ClockIcon, BuildingStorefrontIcon, ChevronRightIcon, BanknotesIcon } from '@heroicons/react/24/solid';
+import { FireIcon } from '@heroicons/react/24/outline';
 
-// --- Reusable Components (from RestaurantMenuScreen.kt) ---
+// --- Reusable Components ---
 
-// Simple Card for Menu Item (similar to MenuItemRow)
+// Simple Card for Menu Item
 const MenuItemCard = ({ menuItem, quantity, onAdd, onIncrement, onDecrement, isEnabled }) => {
-    return (
-        <div className={`bg-white rounded-xl shadow p-4 flex items-center space-x-4 ${!isEnabled ? 'opacity-60' : ''}`}>
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-800 truncate">{menuItem.name}</p>
-                <p className="text-sm font-bold text-brandPink mt-1">
-                   ৳{menuItem.price.toFixed(0)} {/* Display price */}
-                </p>
-            </div>
-            {/* Quantity Selector */}
-            <QuantitySelector
-                quantity={quantity}
-                onAdd={onAdd}
-                onIncrement={onIncrement}
-                onDecrement={onDecrement}
-                isEnabled={isEnabled}
-            />
-        </div>
-    );
+  return (
+    <div style={{
+      backgroundColor: 'white',
+      borderRadius: '12px',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+      padding: '16px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      opacity: isEnabled ? 1 : 0.6
+    }}>
+      <div style={{
+        flex: 1,
+        minWidth: 0
+      }}>
+        <p style={{
+          fontSize: '14px',
+          fontWeight: 600,
+          color: '#1F2937',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>{menuItem.name}</p>
+        <p style={{
+          fontSize: '14px',
+          fontWeight: 700,
+          color: '#DC0C25',
+          marginTop: '4px'
+        }}>
+          ৳{menuItem.price.toFixed(0)}
+        </p>
+      </div>
+      <QuantitySelector
+        quantity={quantity}
+        onAdd={onAdd}
+        onIncrement={onIncrement}
+        onDecrement={onDecrement}
+        isEnabled={isEnabled}
+      />
+    </div>
+  );
 };
 
-// Quantity Selector (similar to RestaurantMenuScreen.kt)
+// Quantity Selector
 const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled }) => {
   if (quantity === 0) {
     return (
       <button
         onClick={onAdd}
         disabled={!isEnabled}
-        className="w-9 h-9 flex items-center justify-center bg-brandPink text-white rounded-full disabled:bg-gray-300 transition hover:bg-opacity-90"
+        style={{
+          width: '36px',
+          height: '36px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: isEnabled ? '#DC0C25' : '#D1D5DB',
+          color: 'white',
+          borderRadius: '9999px',
+          border: 'none',
+          cursor: isEnabled ? 'pointer' : 'not-allowed',
+          transition: 'opacity 0.2s'
+        }}
+        onMouseEnter={(e) => isEnabled && (e.currentTarget.style.opacity = '0.9')}
+        onMouseLeave={(e) => isEnabled && (e.currentTarget.style.opacity = '1')}
       >
-        <PlusIcon className="w-5 h-5" />
+        <PlusIcon style={{ width: '20px', height: '20px' }} />
       </button>
     );
   } else {
     return (
-      <div className="flex items-center space-x-2.5">
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px'
+      }}>
         <button
           onClick={onDecrement}
           disabled={!isEnabled}
-          className="w-7 h-7 flex items-center justify-center bg-gray-200 text-gray-700 rounded-full disabled:bg-gray-300 transition hover:bg-gray-300"
+          style={{
+            width: '28px',
+            height: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: isEnabled ? '#E5E7EB' : '#D1D5DB',
+            color: '#374151',
+            borderRadius: '9999px',
+            border: 'none',
+            cursor: isEnabled ? 'pointer' : 'not-allowed',
+            transition: 'background-color 0.2s'
+          }}
+          onMouseEnter={(e) => isEnabled && (e.currentTarget.style.backgroundColor = '#D1D5DB')}
+          onMouseLeave={(e) => isEnabled && (e.currentTarget.style.backgroundColor = '#E5E7EB')}
         >
-          <MinusIcon className="w-4 h-4" />
+          <MinusIcon style={{ width: '16px', height: '16px' }} />
         </button>
-        <span className="text-base font-bold min-w-[20px] text-center">{quantity}</span>
+        <span style={{
+          fontSize: '16px',
+          fontWeight: 700,
+          minWidth: '20px',
+          textAlign: 'center'
+        }}>{quantity}</span>
         <button
           onClick={onIncrement}
           disabled={!isEnabled}
-          className="w-7 h-7 flex items-center justify-center bg-brandPink text-white rounded-full disabled:bg-gray-300 transition hover:bg-opacity-90"
+          style={{
+            width: '28px',
+            height: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: isEnabled ? '#DC0C25' : '#D1D5DB',
+            color: 'white',
+            borderRadius: '9999px',
+            border: 'none',
+            cursor: isEnabled ? 'pointer' : 'not-allowed',
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => isEnabled && (e.currentTarget.style.opacity = '0.9')}
+          onMouseLeave={(e) => isEnabled && (e.currentTarget.style.opacity = '1')}
         >
-          <PlusIcon className="w-4 h-4" />
+          <PlusIcon style={{ width: '16px', height: '16px' }} />
         </button>
       </div>
     );
   }
 };
 
-
-// Card for PreOrder Category (similar to PreOrderHeader)
+// Card for PreOrder Category
 const PreOrderCategoryCard = ({ category, onClick }) => {
-  // Define colors or get dynamically if needed
-  const cardColor = 'bg-indigo-500'; // Example color
-  const textColor = 'text-indigo-700';
-  const bgColorLight = 'bg-indigo-50';
+  const cardColor = '#6366F1';
+  const textColor = '#4338CA';
+  const bgColorLight = '#EEF2FF';
 
   return (
     <div
-        onClick={onClick}
-        className={`rounded-xl shadow overflow-hidden cursor-pointer ${bgColorLight}`}
+      onClick={onClick}
+      style={{
+        borderRadius: '12px',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        backgroundColor: bgColorLight
+      }}
     >
-        <div className="p-4 flex justify-between items-center">
-            <div className="space-y-1.5">
-                <div className="flex items-center space-x-2">
-                     <div className={`w-8 h-8 rounded-full ${cardColor} flex items-center justify-center`}>
-                        <BuildingStorefrontIcon className="w-5 h-5 text-white" />
-                    </div>
-                    <h3 className="text-base font-bold text-gray-800">{category.name}</h3>
-                </div>
-                <div className="flex items-center space-x-1.5 text-xs text-gray-600 pl-1">
-                    <ClockIcon className="w-3.5 h-3.5" />
-                    <span>Order: {category.startTime} - {category.endTime}</span>
-                </div>
-                <div className="flex items-center space-x-1.5 text-xs font-semibold pl-1 ${textColor}">
-                    <BanknotesIcon className="w-3.5 h-3.5"/> {/* Use Banknotes for delivery time */}
-                    <span>Delivery: {category.deliveryTime}</span>
-                </div>
+      <div style={{
+        padding: '16px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '9999px',
+              backgroundColor: cardColor,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <BuildingStorefrontIcon style={{ width: '20px', height: '20px', color: 'white' }} />
             </div>
-             <div className={`w-10 h-10 rounded-full ${cardColor} flex items-center justify-center flex-shrink-0 ml-3`}>
-                <ChevronRightIcon className="w-6 h-6 text-white" />
-            </div>
+            <h3 style={{
+              fontSize: '16px',
+              fontWeight: 700,
+              color: '#1F2937'
+            }}>{category.name}</h3>
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '12px',
+            color: '#4B5563',
+            paddingLeft: '4px'
+          }}>
+            <ClockIcon style={{ width: '14px', height: '14px' }} />
+            <span>Order: {category.startTime} - {category.endTime}</span>
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '12px',
+            fontWeight: 600,
+            paddingLeft: '4px',
+            color: textColor
+          }}>
+            <BanknotesIcon style={{ width: '14px', height: '14px' }} />
+            <span>Delivery: {category.deliveryTime}</span>
+          </div>
         </div>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '9999px',
+          backgroundColor: cardColor,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          marginLeft: '12px'
+        }}>
+          <ChevronRightIcon style={{ width: '24px', height: '24px', color: 'white' }} />
+        </div>
+      </div>
     </div>
   );
 };
 
-// Blinking Text Component (for "Available Now")
+// Blinking Text Component
 const BlinkingText = ({ text }) => {
-    // Simple implementation using CSS animation via Tailwind classes
-    return (
-        <span className="animate-pulse font-semibold">
-            {text} <FireIcon className="w-4 h-4 inline-block mb-0.5 text-red-500"/> {/* Added Fire icon */}
-        </span>
-    );
+  return (
+    <span style={{
+      fontWeight: 600,
+      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+    }}>
+      {text} <FireIcon style={{
+        width: '16px',
+        height: '16px',
+        display: 'inline-block',
+        marginBottom: '2px',
+        color: '#EF4444'
+      }} />
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: .5; }
+        }
+      `}</style>
+    </span>
+  );
 };
 
-// Availability Chip (for "Instant Delivery")
+// Availability Chip
 const AvailabilityChip = ({ isAvailable }) => {
-  const bgColor = isAvailable ? 'bg-green-100' : 'bg-red-100';
-  const textColor = isAvailable ? 'text-green-800' : 'text-red-800';
+  const bgColor = isAvailable ? '#D1FAE5' : '#FEE2E2';
+  const textColor = isAvailable ? '#065F46' : '#991B1B';
   const text = isAvailable ? 'Instant Delivery Available' : 'Instant Delivery Unavailable';
 
   return (
-    <div className={`inline-block px-3 py-1 rounded-full ${bgColor} ${textColor} text-xs font-bold`}>
+    <div style={{
+      display: 'inline-block',
+      paddingLeft: '12px',
+      paddingRight: '12px',
+      paddingTop: '4px',
+      paddingBottom: '4px',
+      borderRadius: '9999px',
+      backgroundColor: bgColor,
+      color: textColor,
+      fontSize: '12px',
+      fontWeight: 700
+    }}>
       {text}
     </div>
   );
 };
 
-// Bottom Bar (similar to ModernBottomBarWithButtons)
+// Bottom Bar
 const CartBottomBar = ({ onAddToCart, onPlaceOrder, totalItems }) => {
-    if (totalItems === 0) return null; // Don't show if cart is empty
+  if (totalItems === 0) return null;
 
-    return (
-        <div className="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-50">
-             <div className="flex items-center space-x-4 max-w-lg mx-auto">
-                {/* Add to Cart button (just saves) */}
-                <button
-                    onClick={onAddToCart}
-                    className="p-3 border border-gray-300 rounded-lg text-brandPink hover:bg-gray-50"
-                    title="Save selections to main cart"
-                >
-                    <ShoppingCartIcon className="w-6 h-6" />
-                </button>
-                 {/* Place Order button */}
-                <button
-                    onClick={onPlaceOrder}
-                    className="flex-1 h-[50px] flex items-center justify-center bg-darkPink text-white rounded-lg text-base font-semibold transition hover:bg-opacity-90"
-                >
-                    <CheckCircleIcon className="w-5 h-5 mr-2" />
-                    <span>Place Order Now ({totalItems})</span>
-                </button>
-            </div>
-        </div>
-    );
-}
-
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: 'white',
+      padding: '16px',
+      boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.1)',
+      zIndex: 50
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        maxWidth: '512px',
+        margin: '0 auto'
+      }}>
+        <button
+          onClick={onAddToCart}
+          style={{
+            padding: '12px',
+            border: '1px solid #D1D5DB',
+            borderRadius: '8px',
+            color: '#DC0C25',
+            backgroundColor: 'white',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+          title="Save selections to main cart"
+        >
+          <ShoppingCartIcon style={{ width: '24px', height: '24px' }} />
+        </button>
+        <button
+          onClick={onPlaceOrder}
+          style={{
+            flex: 1,
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#B70314',
+            color: 'white',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: 600,
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+        >
+          <CheckCircleIcon style={{ width: '20px', height: '20px', marginRight: '8px' }} />
+          <span>Place Order Now ({totalItems})</span>
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // --- Main Page Component ---
 export default function RestaurantMenuPage() {
@@ -162,14 +345,14 @@ export default function RestaurantMenuPage() {
   const { restaurantId, restaurantName: encodedName } = router.query;
   const restaurantName = encodedName ? decodeURIComponent(encodedName) : 'Restaurant';
 
-  const [preOrderCategories, setPreOrderCategories] = useState([]); // PreOrderCategory[]
-  const [currentMenuItems, setCurrentMenuItems] = useState([]); // MenuItem[]
+  const [preOrderCategories, setPreOrderCategories] = useState([]);
+  const [currentMenuItems, setCurrentMenuItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isInstantDeliveryAvailable, setIsInstantDeliveryAvailable] = useState(false);
-  const [selectedTabIndex, setSelectedTabIndex] = useState(0); // 0 for PreOrder, 1 for Current
+  const [selectedTabIndex, setSelectedTabIndex] = useState(0);
   const [error, setError] = useState('');
 
-  const { cart, addToCart, incrementItem, decrementItem, clearCartForRestaurant, totalItems } = useCart(); // Use cart context
+  const { cart, addToCart, incrementItem, decrementItem, clearCartForRestaurant, totalItems } = useCart();
 
   // --- Fetch Data ---
   useEffect(() => {
@@ -181,27 +364,21 @@ export default function RestaurantMenuPage() {
       try {
         const restaurantRef = doc(db, 'restaurants', restaurantId);
 
-        // Fetch PreOrder Categories
         const preOrderSnap = await getDocs(collection(restaurantRef, 'preOrderCategories'));
         const categories = preOrderSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setPreOrderCategories(categories);
 
-        // Fetch Current Menu Items
         const menuQuery = query(collection(restaurantRef, 'menuItems'), where('category', '==', 'Current Menu'));
         const menuSnap = await getDocs(menuQuery);
         const items = menuSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setCurrentMenuItems(items);
 
-        // Check Rider Availability (simplified query)
-         const ridersQuery = query(
+        const ridersQuery = query(
           collection(db, 'riders'),
           where('isAvailable', '==', true)
-          // We might need a more specific location check here in a real app
-          // whereArrayContains('serviceableLocations', 'Daffodil Smart City') // Assuming fixed location for now
         );
         const ridersSnap = await getDocs(ridersQuery);
         setIsInstantDeliveryAvailable(!ridersSnap.empty);
-
 
       } catch (err) {
         console.error("Error fetching restaurant menu:", err);
@@ -212,87 +389,137 @@ export default function RestaurantMenuPage() {
     };
 
     fetchData();
-  }, [restaurantId]); // Re-fetch if restaurantId changes
+  }, [restaurantId]);
 
-  // --- Cart Handling ---
-  // Get cart items specific to THIS restaurant's temporary selection
   const currentRestaurantCart = Object.values(cart).filter(item => item.restaurantId === restaurantId);
   const currentTotalItems = currentRestaurantCart.reduce((sum, item) => sum + item.quantity, 0);
 
-
-  // --- Navigation Handlers ---
   const handlePreOrderCategoryClick = (category) => {
-    // Navigate to a specific pre-order menu page (if needed, or handle directly)
-    // For now, let's assume clicking category shows items (if structure supports it)
-    // This navigation matches your Android app's logic
     const encodedRestName = encodeURIComponent(restaurantName);
-    const encodedCatName = encodeURIComponent(`Pre-order ${category.name}`); // Prefix required by Android structure
-    router.push(`/preorder-menu/${restaurantId}/${encodedRestName}/${encodedCatName}`); // Define this route later
+    const encodedCatName = encodeURIComponent(`Pre-order ${category.name}`);
+    router.push(`/preorder-menu/${restaurantId}/${encodedRestName}/${encodedCatName}`);
   };
 
   const handlePlaceOrder = () => {
-     // Note: saveSelectionToCart is implicitly handled by CartContext saving to localStorage
-     router.push(`/checkout/${restaurantId}`); // Define checkout route later
+    router.push(`/checkout/${restaurantId}`);
   };
 
-   const handleAddToCart = () => {
-     // saveSelectionToCart is handled by CartContext
-     alert('Items saved to cart!'); // Simple feedback
-     // Optionally, navigate away or clear temporary selection if needed
+  const handleAddToCart = () => {
+    alert('Items saved to cart!');
   };
 
-
-  // --- Render Loading State ---
   if (isLoading) {
-    return <LoadingSpinner />; // Use your splash/loading component
+    return <LoadingSpinner />;
   }
 
-  // --- Render Main Content ---
   return (
-    <div className="min-h-screen bg-gray-50 pb-20"> {/* Padding bottom for cart bar */}
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#F9FAFB',
+      paddingBottom: '80px'
+    }}>
       {/* Top Bar */}
-      <div className="sticky top-0 z-30 bg-white shadow-sm p-3 flex items-center space-x-2">
-        <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-gray-100">
-          <ArrowLeftIcon className="w-6 h-6 text-gray-700" />
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+        backgroundColor: 'white',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        padding: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }}>
+        <button 
+          onClick={() => router.back()}
+          style={{
+            padding: '8px',
+            borderRadius: '9999px',
+            border: 'none',
+            backgroundColor: 'transparent',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          <ArrowLeftIcon style={{ width: '24px', height: '24px', color: '#374151' }} />
         </button>
-        <h1 className="text-lg font-bold text-gray-800 truncate flex-1">{restaurantName}</h1>
+        <h1 style={{
+          fontSize: '18px',
+          fontWeight: 700,
+          color: '#1F2937',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          flex: 1
+        }}>{restaurantName}</h1>
       </div>
 
-       {/* Banner Ad placeholder - Add your Ad component here if needed */}
-       {/* <YourAdBannerComponent /> */}
-
       {/* Tabs */}
-      <div className="sticky top-[68px] z-20 bg-white border-b border-gray-200"> {/* Adjust top value based on TopAppBar height */}
-        <div className="flex">
+      <div style={{
+        position: 'sticky',
+        top: '68px',
+        zIndex: 20,
+        backgroundColor: 'white',
+        borderBottom: '1px solid #E5E7EB'
+      }}>
+        <div style={{ display: 'flex' }}>
           <button
             onClick={() => setSelectedTabIndex(0)}
-            className={`flex-1 py-3 text-center text-sm font-medium border-b-2 ${
-              selectedTabIndex === 0
-                ? 'border-brandPink text-brandPink'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
-            }`}
+            style={{
+              flex: 1,
+              paddingTop: '12px',
+              paddingBottom: '12px',
+              textAlign: 'center',
+              fontSize: '14px',
+              fontWeight: 500,
+              borderBottom: selectedTabIndex === 0 ? '2px solid #DC0C25' : '2px solid transparent',
+              color: selectedTabIndex === 0 ? '#DC0C25' : '#4B5563',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => selectedTabIndex !== 0 && (e.currentTarget.style.color = '#1F2937')}
+            onMouseLeave={(e) => selectedTabIndex !== 0 && (e.currentTarget.style.color = '#4B5563')}
           >
             Pre-Order Category
           </button>
           <button
             onClick={() => setSelectedTabIndex(1)}
-            className={`flex-1 py-3 text-center text-sm font-medium border-b-2 ${
-              selectedTabIndex === 1
-                ? 'border-brandPink text-brandPink'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
-            }`}
+            style={{
+              flex: 1,
+              paddingTop: '12px',
+              paddingBottom: '12px',
+              textAlign: 'center',
+              fontSize: '14px',
+              fontWeight: 500,
+              borderBottom: selectedTabIndex === 1 ? '2px solid #DC0C25' : '2px solid transparent',
+              color: selectedTabIndex === 1 ? '#DC0C25' : '#4B5563',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => selectedTabIndex !== 1 && (e.currentTarget.style.color = '#1F2937')}
+            onMouseLeave={(e) => selectedTabIndex !== 1 && (e.currentTarget.style.color = '#4B5563')}
           >
-             <BlinkingText text="Available Now" />
+            <BlinkingText text="Available Now" />
           </button>
         </div>
       </div>
 
-      {/* Content Area based on Tab */}
-      <div className="p-4 space-y-4">
-        {error && <p className="text-red-600 text-center">{error}</p>}
+      {/* Content Area */}
+      <div style={{
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px'
+      }}>
+        {error && <p style={{ color: '#DC2626', textAlign: 'center' }}>{error}</p>}
 
         {selectedTabIndex === 0 && (
-          // Pre-Order Categories List
           preOrderCategories.length > 0 ? (
             preOrderCategories.map((category) => (
               <PreOrderCategoryCard
@@ -302,26 +529,25 @@ export default function RestaurantMenuPage() {
               />
             ))
           ) : (
-            <p className="text-gray-600 text-center py-10">No pre-order categories available.</p>
+            <p style={{ color: '#4B5563', textAlign: 'center', paddingTop: '40px', paddingBottom: '40px' }}>
+              No pre-order categories available.
+            </p>
           )
         )}
 
         {selectedTabIndex === 1 && (
-          // Current Menu Items List
           <>
-            <div className="text-center">
-                <AvailabilityChip isAvailable={isInstantDeliveryAvailable} />
+            <div style={{ textAlign: 'center' }}>
+              <AvailabilityChip isAvailable={isInstantDeliveryAvailable} />
             </div>
             {currentMenuItems.length > 0 ? (
-                currentMenuItems.map((item) => {
+              currentMenuItems.map((item) => {
                 const cartItem = cart[item.id];
-                // Ensure item is treated as part of the current restaurant for cart logic
                 const restaurantDetails = { restaurantId, restaurantName };
-                 // Only enable if delivery is available
                 const isEnabled = isInstantDeliveryAvailable;
 
                 return (
-                    <MenuItemCard
+                  <MenuItemCard
                     key={item.id}
                     menuItem={item}
                     quantity={cartItem?.quantity || 0}
@@ -329,11 +555,13 @@ export default function RestaurantMenuPage() {
                     onIncrement={() => incrementItem(item.id)}
                     onDecrement={() => decrementItem(item.id)}
                     isEnabled={isEnabled}
-                    />
+                  />
                 );
-                })
+              })
             ) : (
-                <p className="text-gray-600 text-center py-10">No items available right now.</p>
+              <p style={{ color: '#4B5563', textAlign: 'center', paddingTop: '40px', paddingBottom: '40px' }}>
+                No items available right now.
+              </p>
             )}
           </>
         )}
@@ -341,11 +569,10 @@ export default function RestaurantMenuPage() {
 
       {/* Bottom Cart Bar */}
       <CartBottomBar
-          onAddToCart={handleAddToCart}
-          onPlaceOrder={handlePlaceOrder}
-          totalItems={currentTotalItems}
+        onAddToCart={handleAddToCart}
+        onPlaceOrder={handlePlaceOrder}
+        totalItems={currentTotalItems}
       />
-
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { XMarkIcon, PlusIcon, MinusIcon, BuildingStorefrontIcon } from '@heroico
 import { useState, useMemo } from 'react';
 
 // Quantity Selector
-const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled }) {
+const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled }) => {
   if (quantity === 0) {
     return (
       <button
@@ -21,7 +21,7 @@ const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled
           border: 'none',
           cursor: isEnabled ? 'pointer' : 'not-allowed',
           transition: 'opacity 0.2s',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)'
         }}
         onMouseEnter={(e) => isEnabled && (e.currentTarget.style.opacity = '0.9')}
         onMouseLeave={(e) => isEnabled && (e.currentTarget.style.opacity = '1')}
@@ -31,11 +31,13 @@ const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled
     );
   } else {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}
+      >
         <button
           onClick={onDecrement}
           disabled={!isEnabled}
@@ -51,19 +53,21 @@ const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled
             border: 'none',
             cursor: isEnabled ? 'pointer' : 'not-allowed',
             transition: 'background-color 0.2s',
-            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
           }}
           onMouseEnter={(e) => isEnabled && (e.currentTarget.style.backgroundColor = '#D1D5DB')}
           onMouseLeave={(e) => isEnabled && (e.currentTarget.style.backgroundColor = '#E5E7EB')}
         >
           <MinusIcon style={{ width: '20px', height: '20px' }} />
         </button>
-        <span style={{
-          fontSize: '18px',
-          fontWeight: 700,
-          minWidth: '24px',
-          textAlign: 'center'
-        }}>
+        <span
+          style={{
+            fontSize: '18px',
+            fontWeight: 700,
+            minWidth: '24px',
+            textAlign: 'center'
+          }}
+        >
           {quantity}
         </span>
         <button
@@ -81,7 +85,7 @@ const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled
             border: 'none',
             cursor: isEnabled ? 'pointer' : 'not-allowed',
             transition: 'opacity 0.2s',
-            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
           }}
           onMouseEnter={(e) => isEnabled && (e.currentTarget.style.opacity = '0.9')}
           onMouseLeave={(e) => isEnabled && (e.currentTarget.style.opacity = '1')}
@@ -96,7 +100,7 @@ const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled
 export default function ItemDetailModal({ item, onClose }) {
   const [closeHovered, setCloseHovered] = useState(false);
   const [doneHovered, setDoneHovered] = useState(false);
-  
+
   if (!item) return null;
 
   const { cart, addToCart, incrementItem, decrementItem } = useCart();
@@ -121,20 +125,20 @@ export default function ItemDetailModal({ item, onClose }) {
     return { id, name, price, category: 'Store Item' };
   };
 
-  const restaurantDetails = { 
-    restaurantId: 'yumzy_store', 
-    restaurantName: item.miniResName || 'Yumzy Store' 
+  const restaurantDetails = {
+    restaurantId: 'yumzy_store',
+    restaurantName: item.miniResName || 'Yumzy Store'
   };
 
   return (
-    <div 
+    <div
       style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -148,7 +152,7 @@ export default function ItemDetailModal({ item, onClose }) {
         style={{
           backgroundColor: 'white',
           borderRadius: '12px',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
           width: '100%',
           maxWidth: '448px',
           maxHeight: '90vh',
@@ -159,13 +163,15 @@ export default function ItemDetailModal({ item, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Image Section */}
-        <div style={{
-          position: 'relative',
-          height: '192px',
-          width: '100%',
-          backgroundColor: '#E5E7EB',
-          flexShrink: 0
-        }}>
+        <div
+          style={{
+            position: 'relative',
+            height: '192px',
+            width: '100%',
+            backgroundColor: '#E5E7EB',
+            flexShrink: 0
+          }}
+        >
           <img
             src={item.imageUrl || '/placeholder-image.png'}
             alt={item.name}
@@ -191,7 +197,7 @@ export default function ItemDetailModal({ item, onClose }) {
               right: '12px',
               width: '32px',
               height: '32px',
-              backgroundColor: closeHovered ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.4)',
+              backgroundColor: closeHovered ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.4)',
               borderRadius: '9999px',
               display: 'flex',
               alignItems: 'center',
@@ -207,106 +213,89 @@ export default function ItemDetailModal({ item, onClose }) {
           </button>
           {/* Total Quantity Badge */}
           {totalQuantity > 0 && (
-            <span style={{
-              position: 'absolute',
-              top: '12px',
-              left: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: '24px',
-              height: '24px',
-              padding: '0 8px',
-              fontSize: '12px',
-              fontWeight: 700,
-              color: 'white',
-              backgroundColor: '#DC0C25',
-              borderRadius: '9999px',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
-            }}>
+            <span
+              style={{
+                position: 'absolute',
+                top: '12px',
+                left: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '24px',
+                height: '24px',
+                padding: '0 8px',
+                fontSize: '12px',
+                fontWeight: 700,
+                color: 'white',
+                backgroundColor: '#DC0C25',
+                borderRadius: '9999px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}
+            >
               {totalQuantity}
             </span>
           )}
         </div>
 
         {/* Scrollable Details Section */}
-        <div style={{
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          overflowY: 'auto',
-          flex: 1
-        }}>
-          <h2 style={{
-            fontSize: '20px',
-            fontWeight: 700,
-            color: '#1F2937'
-          }}>
-            {item.name}
-          </h2>
+        <div
+          style={{
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            overflowY: 'auto',
+            flex: 1
+          }}
+        >
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1F2937' }}>{item.name}</h2>
 
-          {/* Mini Restaurant Name */}
           {item.miniResName && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              color: '#DC0C25',
-              fontWeight: 500
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '12px',
+                color: '#DC0C25',
+                fontWeight: 500
+              }}
+            >
               <BuildingStorefrontIcon style={{ width: '16px', height: '16px' }} />
               <span>{item.miniResName}</span>
             </div>
           )}
 
-          {/* Description */}
-          <p style={{
-            fontSize: '14px',
-            color: '#4B5563'
-          }}>
+          <p style={{ fontSize: '14px', color: '#4B5563' }}>
             {item.itemDescription || 'No description available.'}
           </p>
 
-          {/* Availability Message */}
           {!isEnabled && (
-            <p style={{
-              fontSize: '14px',
-              color: '#991B1B',
-              fontWeight: 600,
-              textAlign: 'center',
-              paddingTop: '8px',
-              paddingBottom: '8px',
-              backgroundColor: '#FEE2E2',
-              borderRadius: '8px'
-            }}>
+            <p
+              style={{
+                fontSize: '14px',
+                color: '#991B1B',
+                fontWeight: 600,
+                textAlign: 'center',
+                padding: '8px 0',
+                backgroundColor: '#FEE2E2',
+                borderRadius: '8px'
+              }}
+            >
               {item.stock !== 'yes' ? 'Currently Out of Stock' : 'Shop is Closed'}
             </p>
           )}
 
-          {/* Variant Selection or Single Item */}
           {isMultiVariant ? (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              paddingTop: '8px'
-            }}>
-              <h3 style={{
-                fontSize: '16px',
-                fontWeight: 600,
-                color: '#374151'
-              }}>
-                Choose Variant:
-              </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '8px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#374151' }}>Choose Variant:</h3>
               {item.variants.map((variant) => {
                 const variantId = `${item.id}_${variant.name}`;
                 const quantity = cart[variantId]?.quantity || 0;
                 const cartMenuItem = createCartMenuItem(variant);
 
                 return (
-                  <div 
+                  <div
                     key={variant.name}
                     style={{
                       display: 'flex',
@@ -318,18 +307,8 @@ export default function ItemDetailModal({ item, onClose }) {
                     }}
                   >
                     <div>
-                      <p style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        color: '#1F2937'
-                      }}>
-                        {variant.name}
-                      </p>
-                      <p style={{
-                        fontSize: '14px',
-                        fontWeight: 700,
-                        color: '#DC0C25'
-                      }}>
+                      <p style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>{variant.name}</p>
+                      <p style={{ fontSize: '14px', fontWeight: 700, color: '#DC0C25' }}>
                         ৳{variant.price.toFixed(0)}
                       </p>
                     </div>
@@ -345,24 +324,17 @@ export default function ItemDetailModal({ item, onClose }) {
               })}
             </div>
           ) : (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingTop: '12px'
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingTop: '12px'
+              }}
+            >
               <div>
-                <p style={{
-                  fontSize: '12px',
-                  color: '#6B7280'
-                }}>
-                  Price
-                </p>
-                <p style={{
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  color: '#DC0C25'
-                }}>
+                <p style={{ fontSize: '12px', color: '#6B7280' }}>Price</p>
+                <p style={{ fontSize: '20px', fontWeight: 700, color: '#DC0C25' }}>
                   ৳{item.price.toFixed(0)}
                 </p>
               </div>
@@ -377,13 +349,15 @@ export default function ItemDetailModal({ item, onClose }) {
           )}
         </div>
 
-        {/* Footer Button */}
-        <div style={{
-          padding: '16px',
-          borderTop: '1px solid #E5E7EB',
-          marginTop: 'auto',
-          flexShrink: 0
-        }}>
+        {/* Footer */}
+        <div
+          style={{
+            padding: '16px',
+            borderTop: '1px solid #E5E7EB',
+            marginTop: 'auto',
+            flexShrink: 0
+          }}
+        >
           <button
             onClick={onClose}
             onMouseEnter={() => setDoneHovered(true)}
@@ -405,7 +379,9 @@ export default function ItemDetailModal({ item, onClose }) {
               transition: 'opacity 0.2s'
             }}
           >
-            {totalQuantity > 0 ? `Done (${totalQuantity} item${totalQuantity > 1 ? 's' : ''})` : 'Close'}
+            {totalQuantity > 0
+              ? `Done (${totalQuantity} item${totalQuantity > 1 ? 's' : ''})`
+              : 'Close'}
           </button>
         </div>
       </div>
