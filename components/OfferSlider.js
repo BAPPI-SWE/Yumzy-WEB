@@ -1,46 +1,73 @@
 // Simple Image component that handles potential missing images
 const OfferImage = ({ src, alt }) => {
-    // In a real app, you might use Next.js <Image> component for optimization,
-    // but for simplicity, we use a standard <img> tag.
-    // Add error handling if needed.
-    return (
-        <img
-            src={src || '/placeholder-image.png'} // Provide a fallback image path if src is empty
-            alt={alt}
-            className="w-full h-full object-cover" // Ensure image covers the card
-            loading="lazy" // Lazy load images
-        />
-    );
+  return (
+    <img
+      src={src || '/placeholder-image.png'}
+      alt={alt}
+      style={{
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover'
+      }}
+      loading="lazy"
+    />
+  );
 };
 
 export default function OfferSlider({ offers }) {
   if (!offers || offers.length === 0) {
-    return null; // Don't render anything if there are no offers
+    return null;
   }
 
   return (
-    <div className="px-4 pt-2"> {/* Add horizontal padding */}
-        <h2 className="text-lg font-bold mb-3 text-gray-800">Special Offers</h2>
-        <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide"> {/* Enable horizontal scroll */}
+    <div style={{
+      paddingLeft: '16px',
+      paddingRight: '16px',
+      paddingTop: '8px'
+    }}>
+      <h2 style={{
+        fontSize: '18px',
+        fontWeight: 700,
+        marginBottom: '12px',
+        color: '#1F2937'
+      }}>
+        Special Offers
+      </h2>
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        overflowX: 'auto',
+        paddingBottom: '8px',
+        msOverflowStyle: 'none',
+        scrollbarWidth: 'none',
+        WebkitOverflowScrolling: 'touch'
+      }}>
         {offers.map((offer, index) => (
-            <div
+          <div
             key={index}
-            className="flex-shrink-0 w-[280px] h-[140px] rounded-xl overflow-hidden shadow-md cursor-pointer transform hover:scale-105 transition-transform duration-200"
-            >
+            style={{
+              flexShrink: 0,
+              width: '280px',
+              height: '140px',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
+              transform: 'scale(1)'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
             <OfferImage src={offer.imageUrl} alt={`Offer ${index + 1}`} />
-            </div>
+          </div>
         ))}
-        </div>
-        {/* Basic scrollbar styling (optional, might need browser prefixes) */}
-        <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none; /* Hide scrollbar for Chrome, Safari and Opera */
+      </div>
+      <style jsx>{`
+        div::-webkit-scrollbar {
+          display: none;
         }
-        .scrollbar-hide {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        `}</style>
+      `}</style>
     </div>
   );
 }

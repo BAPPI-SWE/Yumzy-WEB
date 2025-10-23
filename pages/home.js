@@ -201,9 +201,20 @@ function HomePageContent() {
   // --- Render Loading or Content ---
   if (isLoadingData) {
     return (
-      <div className="flex justify-center items-center h-[calc(100vh-80px)]">
-        <div className="text-center">
-          <p className="text-lg font-semibold text-gray-600">Loading Yumzy...</p>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: 'calc(100vh - 80px)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{
+            fontSize: '18px',
+            fontWeight: 600,
+            color: '#4B5563'
+          }}>
+            Loading Yumzy...
+          </p>
           <LoadingSpinner />
         </div>
       </div>
@@ -212,7 +223,12 @@ function HomePageContent() {
 
   // --- Render Page ---
   return (
-    <div className="flex flex-col relative min-h-screen">
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      position: 'relative',
+      minHeight: '100vh'
+    }}>
       <HomeTopBar
         userProfile={userProfile}
         searchQuery={searchQuery}
@@ -222,22 +238,64 @@ function HomePageContent() {
       />
 
       {/* Main content (kept visible, blurred when searching) */}
-      <div className={`flex-1 overflow-y-auto ${searchResults !== null ? 'blur-sm pointer-events-none' : ''}`}>
-        {error && <div className="p-4 m-4 bg-red-100 text-red-700 rounded-lg text-center">{error}</div>}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        filter: searchResults !== null ? 'blur(4px)' : 'none',
+        pointerEvents: searchResults !== null ? 'none' : 'auto',
+        transition: 'filter 0.2s'
+      }}>
+        {error && (
+          <div style={{
+            padding: '16px',
+            margin: '16px',
+            backgroundColor: '#FEE2E2',
+            color: '#991B1B',
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            {error}
+          </div>
+        )}
 
         {!error && userProfile?.subLocation && (
-          <div className="space-y-6 py-4">
+          <div style={{
+            paddingTop: '16px',
+            paddingBottom: '16px'
+          }}>
             {offers.length > 0 && <OfferSlider offers={offers} />}
-            <CategorySection onCategoryClick={handleCategoryClick} />
+            <div style={{ marginTop: '24px' }}>
+              <CategorySection onCategoryClick={handleCategoryClick} />
+            </div>
 
-            <div className="px-4">
-              <h2 className="text-xl font-bold mb-3 text-gray-800">Available Hotels Near You</h2>
+            <div style={{
+              paddingLeft: '16px',
+              paddingRight: '16px',
+              marginTop: '24px'
+            }}>
+              <h2 style={{
+                fontSize: '20px',
+                fontWeight: 700,
+                marginBottom: '12px',
+                color: '#1F2937'
+              }}>
+                Available Hotels Near You
+              </h2>
               {restaurants.length === 0 ? (
-                <p className="text-gray-600 text-center py-10">
+                <p style={{
+                  color: '#4B5563',
+                  textAlign: 'center',
+                  paddingTop: '40px',
+                  paddingBottom: '40px'
+                }}>
                   No restaurants found delivering to your location.
                 </p>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                  gap: '16px'
+                }}>
                   {restaurants.map((restaurant) => (
                     <RestaurantCard
                       key={restaurant.ownerId}
@@ -250,7 +308,7 @@ function HomePageContent() {
             </div>
           </div>
         )}
-        <div className="h-10"></div>
+        <div style={{ height: '40px' }}></div>
       </div>
 
       {/* Search Results Overlay */}

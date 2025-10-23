@@ -1,83 +1,201 @@
 import { useState } from 'react';
-import { MapPinIcon, BellIcon, HeartIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'; // Outline icons
+import { MapPinIcon, BellIcon, HeartIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
-// Search Bar Component (similar to ModernSearchBar in HomeScreen.kt)
+// Search Bar Component
 const SearchBar = ({ query, onQueryChange, onFocusChange }) => {
+  const [isFocused, setIsFocused] = useState(false);
+
   const handleClear = () => {
     onQueryChange('');
   };
 
+  const handleFocus = () => {
+    setIsFocused(true);
+    onFocusChange(true);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    onFocusChange(false);
+  };
+
   return (
-    <div className="relative w-full">
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-        <MagnifyingGlassIcon className="h-5 w-5 text-gray-500" />
+    <div style={{ position: 'relative', width: '100%' }}>
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        paddingLeft: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        pointerEvents: 'none'
+      }}>
+        <MagnifyingGlassIcon style={{ height: '20px', width: '20px', color: '#6B7280' }} />
       </div>
       <input
         type="text"
         placeholder="Search Restaurants or Foods..."
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
-        onFocus={() => onFocusChange(true)}
-        onBlur={() => onFocusChange(false)} // Optional: handle blur if needed
-        className="w-full h-[44px] pl-11 pr-10 py-2 text-sm bg-white rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brandPink focus:border-transparent shadow-sm"
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        style={{
+          width: '100%',
+          height: '44px',
+          paddingLeft: '44px',
+          paddingRight: '40px',
+          paddingTop: '8px',
+          paddingBottom: '8px',
+          fontSize: '14px',
+          backgroundColor: 'white',
+          borderRadius: '9999px',
+          border: isFocused ? '2px solid #DC0C25' : '1px solid #E5E7EB',
+          outline: 'none',
+          boxShadow: isFocused ? '0 0 0 3px rgba(220, 12, 37, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          transition: 'all 0.2s'
+        }}
       />
       {query && (
         <button
           onClick={handleClear}
-          className="absolute inset-y-0 right-0 pr-4 flex items-center"
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            right: 0,
+            paddingRight: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer'
+          }}
         >
-          <XMarkIcon className="h-5 w-5 text-gray-500 hover:text-gray-700" />
+          <XMarkIcon style={{ height: '20px', width: '20px', color: '#6B7280' }} />
         </button>
       )}
     </div>
   );
 };
 
-
 // Main Top Bar Component
 export default function HomeTopBar({
   userProfile,
   searchQuery,
   onSearchQueryChange,
-  onNotificationClick, // Add this prop
-  onFavoriteClick      // Add this prop
+  onNotificationClick,
+  onFavoriteClick
 }) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   return (
-    // Gradient background container with rounded bottom corners
-    <div className="sticky top-0 z-40 bg-gradient-to-b from-brandPink to-darkPink text-white rounded-b-[20px] shadow-md">
-      <div className="px-4 pt-4 pb-3 space-y-3"> {/* Use space-y for spacing */}
-        {/* Location and Icons Row (conditionally rendered or styled based on focus/scroll later) */}
-        <div className="flex justify-between items-center h-10"> {/* Fixed height */}
-          <div className="flex items-center min-w-0"> {/* Allow shrinking */}
-            <MapPinIcon className="w-5 h-5 mr-1.5 flex-shrink-0" />
-            <div className="flex flex-col min-w-0"> {/* Allow shrinking */}
-              <span className="text-sm font-semibold truncate">
+    <div style={{
+      position: 'sticky',
+      top: 0,
+      zIndex: 40,
+      background: 'linear-gradient(to bottom, #DC0C25, #B70314)',
+      color: 'white',
+      borderBottomLeftRadius: '20px',
+      borderBottomRightRadius: '20px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+    }}>
+      <div style={{
+        paddingLeft: '16px',
+        paddingRight: '16px',
+        paddingTop: '16px',
+        paddingBottom: '12px'
+      }}>
+        {/* Location and Icons Row */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          height: '40px',
+          marginBottom: '12px'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            minWidth: 0,
+            flex: 1
+          }}>
+            <MapPinIcon style={{
+              width: '20px',
+              height: '20px',
+              marginRight: '6px',
+              flexShrink: 0
+            }} />
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              minWidth: 0
+            }}>
+              <span style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
                 {userProfile?.baseLocation || '...'}
               </span>
               {userProfile?.subLocation && (
-                <span className="text-xs text-white/90 truncate">
+                <span style={{
+                  fontSize: '12px',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
                   {userProfile.subLocation}
                 </span>
               )}
             </div>
           </div>
-          <div className="flex items-center space-x-1">
-            <button onClick={onFavoriteClick} className="p-2 hover:bg-white/10 rounded-full">
-                <HeartIcon className="w-5 h-5" />
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}>
+            <button
+              onClick={onFavoriteClick}
+              style={{
+                padding: '8px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: '9999px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <HeartIcon style={{ width: '20px', height: '20px', color: 'white' }} />
             </button>
-            <button onClick={onNotificationClick} className="p-2 hover:bg-white/10 rounded-full">
-              <BellIcon className="w-6 h-6" />
+            <button
+              onClick={onNotificationClick}
+              style={{
+                padding: '8px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: '9999px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <BellIcon style={{ width: '24px', height: '24px', color: 'white' }} />
             </button>
           </div>
         </div>
 
         {/* Search Bar */}
         <SearchBar
-            query={searchQuery}
-            onQueryChange={onSearchQueryChange}
-            onFocusChange={setIsSearchFocused}
+          query={searchQuery}
+          onQueryChange={onSearchQueryChange}
+          onFocusChange={setIsSearchFocused}
         />
       </div>
     </div>
