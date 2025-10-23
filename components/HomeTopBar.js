@@ -20,7 +20,11 @@ const SearchBar = ({ query, onQueryChange, onFocusChange }) => {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
+    <div style={{ 
+      position: 'relative', 
+      width: '100%',
+      maxWidth: '100%' // Added constraint
+    }}>
       <div style={{
         position: 'absolute',
         top: 0,
@@ -29,7 +33,8 @@ const SearchBar = ({ query, onQueryChange, onFocusChange }) => {
         paddingLeft: '16px',
         display: 'flex',
         alignItems: 'center',
-        pointerEvents: 'none'
+        pointerEvents: 'none',
+        zIndex: 1
       }}>
         <MagnifyingGlassIcon style={{ height: '20px', width: '20px', color: '#6B7280' }} />
       </div>
@@ -42,9 +47,10 @@ const SearchBar = ({ query, onQueryChange, onFocusChange }) => {
         onBlur={handleBlur}
         style={{
           width: '100%',
+          maxWidth: '100%', // Added constraint
           height: '44px',
           paddingLeft: '44px',
-          paddingRight: '40px',
+          paddingRight: query ? '40px' : '16px',
           paddingTop: '8px',
           paddingBottom: '8px',
           fontSize: '14px',
@@ -53,7 +59,8 @@ const SearchBar = ({ query, onQueryChange, onFocusChange }) => {
           border: isFocused ? '2px solid #DC0C25' : '1px solid #E5E7EB',
           outline: 'none',
           boxShadow: isFocused ? '0 0 0 3px rgba(220, 12, 37, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-          transition: 'all 0.2s'
+          transition: 'all 0.2s',
+          boxSizing: 'border-box' // Added to include padding in width calculation
         }}
       />
       {query && (
@@ -61,15 +68,17 @@ const SearchBar = ({ query, onQueryChange, onFocusChange }) => {
           onClick={handleClear}
           style={{
             position: 'absolute',
-            top: 0,
-            bottom: 0,
-            right: 0,
-            paddingRight: '16px',
+            top: '50%',
+            right: '12px',
+            transform: 'translateY(-50%)',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             background: 'none',
             border: 'none',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            padding: '4px',
+            zIndex: 2
           }}
         >
           <XMarkIcon style={{ height: '20px', width: '20px', color: '#6B7280' }} />
@@ -98,13 +107,19 @@ export default function HomeTopBar({
       color: 'white',
       borderBottomLeftRadius: '20px',
       borderBottomRightRadius: '20px',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+      width: '100%',
+      maxWidth: '100%', // Added constraint
+      boxSizing: 'border-box' // Added
     }}>
       <div style={{
         paddingLeft: '16px',
         paddingRight: '16px',
         paddingTop: '16px',
-        paddingBottom: '12px'
+        paddingBottom: '12px',
+        width: '100%',
+        maxWidth: '100%', // Added constraint
+        boxSizing: 'border-box' // Added
       }}>
         {/* Location and Icons Row */}
         <div style={{
@@ -112,13 +127,17 @@ export default function HomeTopBar({
           justifyContent: 'space-between',
           alignItems: 'center',
           height: '40px',
-          marginBottom: '12px'
+          marginBottom: '12px',
+          width: '100%',
+          maxWidth: '100%', // Added constraint
+          gap: '8px' // Added gap for better spacing
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             minWidth: 0,
-            flex: 1
+            flex: 1,
+            overflow: 'hidden' // Added to prevent overflow
           }}>
             <MapPinIcon style={{
               width: '20px',
@@ -129,7 +148,9 @@ export default function HomeTopBar({
             <div style={{
               display: 'flex',
               flexDirection: 'column',
-              minWidth: 0
+              minWidth: 0,
+              flex: 1,
+              overflow: 'hidden' // Added
             }}>
               <span style={{
                 fontSize: '14px',
@@ -156,7 +177,8 @@ export default function HomeTopBar({
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '4px',
+            flexShrink: 0 // Prevent icons from shrinking
           }}>
             <button
               onClick={onFavoriteClick}
@@ -166,7 +188,10 @@ export default function HomeTopBar({
                 border: 'none',
                 borderRadius: '9999px',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s'
+                transition: 'background-color 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -181,7 +206,10 @@ export default function HomeTopBar({
                 border: 'none',
                 borderRadius: '9999px',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s'
+                transition: 'background-color 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -192,11 +220,17 @@ export default function HomeTopBar({
         </div>
 
         {/* Search Bar */}
-        <SearchBar
-          query={searchQuery}
-          onQueryChange={onSearchQueryChange}
-          onFocusChange={setIsSearchFocused}
-        />
+        <div style={{
+          width: '100%',
+          maxWidth: '100%', // Added constraint
+          boxSizing: 'border-box' // Added
+        }}>
+          <SearchBar
+            query={searchQuery}
+            onQueryChange={onSearchQueryChange}
+            onFocusChange={setIsSearchFocused}
+          />
+        </div>
       </div>
     </div>
   );

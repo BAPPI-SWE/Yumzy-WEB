@@ -5,7 +5,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { db } from '../firebase/config';
 import { doc, setDoc, getDocs, collection } from 'firebase/firestore';
 
-// This component replicates the Dropdown/ExposedDropdownMenuBox
+// Dropdown component
 const SelectDropdown = ({
   label,
   value,
@@ -14,19 +14,37 @@ const SelectDropdown = ({
   required = false,
   disabled = false,
 }) => {
+  const [isFocused, setIsFocused] = useState(false);
   const isError = required && !value;
+
   return (
-    <div className="w-full">
-      <label className="block text-sm font-medium text-gray-700">
+    <div style={{ width: '100%' }}>
+      <label style={{
+        display: 'block',
+        fontSize: '14px',
+        fontWeight: 500,
+        color: '#374151'
+      }}>
         {label} {required && '*'}
       </label>
       <select
         value={value}
         onChange={(e) => onSelect(e.target.value)}
         disabled={disabled}
-        className={`w-full px-4 py-3 mt-1 text-lg border ${
-          isError ? 'border-red-500' : 'border-gray-300'
-        } rounded-xl focus:outline-none focus:ring-2 focus:ring-deepPink`}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        style={{
+          width: '100%',
+          padding: '12px 16px',
+          marginTop: '4px',
+          fontSize: '18px',
+          border: isError ? '2px solid #EF4444' : isFocused ? '2px solid #D50032' : '1px solid #D1D5DB',
+          borderRadius: '12px',
+          outline: 'none',
+          backgroundColor: disabled ? '#F3F4F6' : 'white',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          transition: 'border 0.2s'
+        }}
       >
         <option value="">
           {disabled ? 'Loading...' : `Select ${label}`}
@@ -38,7 +56,13 @@ const SelectDropdown = ({
         ))}
       </select>
       {isError && (
-        <p className="mt-1 text-sm text-red-600">{label} is required.</p>
+        <p style={{
+          marginTop: '4px',
+          fontSize: '14px',
+          color: '#DC2626'
+        }}>
+          {label} is required.
+        </p>
       )}
     </div>
   );
@@ -48,14 +72,12 @@ export default function UserDetails() {
   const { user, profileExists, loading } = useAuth();
   const router = useRouter();
 
-  // Form State (from UserDetailsScreen.kt)
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [building, setBuilding] = useState('');
   const [floor, setFloor] = useState('');
   const [room, setRoom] = useState('');
 
-  // Location State (from LocationViewModel.kt)
   const [allLocations, setAllLocations] = useState({});
   const [baseLocationOptions, setBaseLocationOptions] = useState([]);
   const [subLocationOptions, setSubLocationOptions] = useState([]);
@@ -65,10 +87,14 @@ export default function UserDetails() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // --- Validation ---
+  const [nameFocused, setNameFocused] = useState(false);
+  const [phoneFocused, setPhoneFocused] = useState(false);
+  const [buildingFocused, setBuildingFocused] = useState(false);
+  const [floorFocused, setFloorFocused] = useState(false);
+  const [roomFocused, setRoomFocused] = useState(false);
+
   const isFormValid = phone && selectedBase && selectedSub;
 
-  // --- Fetch locations on load (replicating LocationViewModel) ---
   useEffect(() => {
     const fetchLocations = async () => {
       try {
@@ -95,21 +121,18 @@ export default function UserDetails() {
     fetchLocations();
   }, []);
 
-  // --- Set initial name from auth profile ---
   useEffect(() => {
     if (user && user.displayName) {
       setName(user.displayName);
     }
   }, [user]);
 
-  // --- Handle location selections ---
   const handleBaseSelect = (base) => {
     setSelectedBase(base);
     setSubLocationOptions(allLocations[base] || []);
-    setSelectedSub(''); // Reset sub-location
+    setSelectedSub('');
   };
 
-  // --- Handle Save (replicating onSaveClicked) ---
   const handleSave = async (e) => {
     e.preventDefault();
     if (!isFormValid || isProcessing || !user) return;
@@ -126,16 +149,10 @@ export default function UserDetails() {
       floor: floor,
       room: room,
       email: user.email,
-      // We can't get FCM/OneSignal tokens securely here.
-      // We will handle that in the main app.
     };
 
     try {
-      // Save the data to Firestore in the 'users' collection
       await setDoc(doc(db, 'users', user.uid), userProfile);
-
-      // Success! Reload the page. The AuthContext will now see
-      // profileExists=true and redirect to '/home'
       window.location.reload();
     } catch (err) {
       console.error('Failed to save profile', err);
@@ -144,15 +161,12 @@ export default function UserDetails() {
     }
   };
 
-  // --- Redirect logic ---
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        // Not logged in, go to auth
         router.push('/auth');
       }
       if (user && profileExists) {
-        // Already set up, go to home
         router.push('/home');
       }
     }
@@ -162,42 +176,98 @@ export default function UserDetails() {
     return <LoadingSpinner />;
   }
 
-  // --- This is the UI, translated from UserDetailsScreen.kt ---
   return (
-    <div className="flex flex-col items-center min-h-screen p-4 bg-gray-50">
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      minHeight: '100vh',
+      padding: '16px',
+      backgroundColor: '#F9FAFB'
+    }}>
       <form
         onSubmit={handleSave}
-        className="w-full max-w-md p-6 py-8 my-10 bg-white shadow-xl rounded-2xl"
+        style={{
+          width: '100%',
+          maxWidth: '448px',
+          padding: '24px',
+          paddingTop: '32px',
+          paddingBottom: '32px',
+          marginTop: '40px',
+          marginBottom: '40px',
+          backgroundColor: 'white',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          borderRadius: '16px'
+        }}
       >
-        <h1 className="text-3xl font-bold text-center text-deepPink">
+        <h1 style={{
+          fontSize: '30px',
+          fontWeight: 700,
+          textAlign: 'center',
+          color: '#D50032'
+        }}>
           Complete Your Profile
         </h1>
-        <p className="mt-2 text-center text-gray-600">
+        <p style={{
+          marginTop: '8px',
+          textAlign: 'center',
+          color: '#4B5563'
+        }}>
           Please provide this info for accurate delivery.
         </p>
 
         {formError && (
-          <p className="mt-4 text-center text-red-600 bg-red-100 p-3 rounded-lg">
+          <p style={{
+            marginTop: '16px',
+            textAlign: 'center',
+            color: '#991B1B',
+            backgroundColor: '#FEE2E2',
+            padding: '12px',
+            borderRadius: '8px'
+          }}>
             {formError}
           </p>
         )}
 
-        <div className="mt-8 space-y-6">
+        <div style={{
+          marginTop: '32px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '24px'
+        }}>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onFocus={() => setNameFocused(true)}
+            onBlur={() => setNameFocused(false)}
             placeholder="Your Name"
-            className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-deepPink"
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              fontSize: '18px',
+              border: nameFocused ? '2px solid #D50032' : '1px solid #D1D5DB',
+              borderRadius: '12px',
+              outline: 'none',
+              transition: 'border 0.2s'
+            }}
           />
           <input
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+            onFocus={() => setPhoneFocused(true)}
+            onBlur={() => setPhoneFocused(false)}
             placeholder="Phone Number *"
-            className={`w-full px-4 py-3 text-lg border rounded-xl focus:outline-none focus:ring-2 focus:ring-deepPink ${
-              phone ? 'border-gray-300' : 'border-red-500'
-            }`}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              fontSize: '18px',
+              border: phone ? (phoneFocused ? '2px solid #D50032' : '1px solid #D1D5DB') : '2px solid #EF4444',
+              borderRadius: '12px',
+              outline: 'none',
+              transition: 'border 0.2s'
+            }}
           />
 
           <SelectDropdown
@@ -221,24 +291,54 @@ export default function UserDetails() {
             type="text"
             value={building}
             onChange={(e) => setBuilding(e.target.value)}
+            onFocus={() => setBuildingFocused(true)}
+            onBlur={() => setBuildingFocused(false)}
             placeholder="Building Name / Detail Home Address"
-            className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-deepPink"
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              fontSize: '18px',
+              border: buildingFocused ? '2px solid #D50032' : '1px solid #D1D5DB',
+              borderRadius: '12px',
+              outline: 'none',
+              transition: 'border 0.2s'
+            }}
           />
 
-          <div className="flex gap-4">
+          <div style={{ display: 'flex', gap: '16px' }}>
             <input
               type="text"
               value={floor}
               onChange={(e) => setFloor(e.target.value)}
+              onFocus={() => setFloorFocused(true)}
+              onBlur={() => setFloorFocused(false)}
               placeholder="Floor No."
-              className="w-1/2 px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-deepPink"
+              style={{
+                width: '50%',
+                padding: '12px 16px',
+                fontSize: '18px',
+                border: floorFocused ? '2px solid #D50032' : '1px solid #D1D5DB',
+                borderRadius: '12px',
+                outline: 'none',
+                transition: 'border 0.2s'
+              }}
             />
             <input
               type="text"
               value={room}
               onChange={(e) => setRoom(e.target.value)}
+              onFocus={() => setRoomFocused(true)}
+              onBlur={() => setRoomFocused(false)}
               placeholder="Room No."
-              className="w-1/2 px-4 py-3 text-lg border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-deepPink"
+              style={{
+                width: '50%',
+                padding: '12px 16px',
+                fontSize: '18px',
+                border: roomFocused ? '2px solid #D50032' : '1px solid #D1D5DB',
+                borderRadius: '12px',
+                outline: 'none',
+                transition: 'border 0.2s'
+              }}
             />
           </div>
         </div>
@@ -246,11 +346,22 @@ export default function UserDetails() {
         <button
           type="submit"
           disabled={!isFormValid || isProcessing}
-          className={`w-full h-[56px] mt-10 text-lg font-semibold text-white rounded-xl transition ${
-            !isFormValid || isProcessing
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-deepPink hover:bg-opacity-90'
-          }`}
+          style={{
+            width: '100%',
+            height: '56px',
+            marginTop: '40px',
+            fontSize: '18px',
+            fontWeight: 600,
+            color: 'white',
+            backgroundColor: (!isFormValid || isProcessing) ? '#9CA3AF' : '#D50032',
+            borderRadius: '12px',
+            border: 'none',
+            cursor: (!isFormValid || isProcessing) ? 'not-allowed' : 'pointer',
+            opacity: (!isFormValid || isProcessing) ? 1 : 1,
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => (!isFormValid || isProcessing) ? null : (e.currentTarget.style.opacity = '0.9')}
+          onMouseLeave={(e) => (!isFormValid || isProcessing) ? null : (e.currentTarget.style.opacity = '1')}
         >
           {isProcessing ? 'Saving...' : 'Save & Continue'}
         </button>
