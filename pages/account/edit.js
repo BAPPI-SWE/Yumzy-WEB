@@ -1,25 +1,42 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import ProtectedRoute from '../../components/ProtectedRoute'; // Adjust path
-import { useAuth } from '../../context/AuthContext'; // Adjust path
-import { db } from '../../firebase/config'; // Adjust path
+import ProtectedRoute from '../../components/ProtectedRoute';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../firebase/config';
 import { doc, getDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
-import { updateProfile } from 'firebase/auth'; // Firebase Auth function
-import LoadingSpinner from '../../components/LoadingSpinner'; // Adjust path
+import { updateProfile } from 'firebase/auth';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { ArrowLeftIcon, CheckIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';
 
-// Dropdown Component (copied from pages/details.js - consider making this reusable)
-const SelectDropdown = ({ label, value, options, onSelect, required = false, disabled = false, error = false, errorText = ''}) => {
+// Dropdown Component
+const SelectDropdown = ({ label, value, options, onSelect, required = false, disabled = false, error = false, errorText = '' }) => {
   return (
-    <div className="w-full">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+    <div style={{ width: '100%' }}>
+      <label style={{
+        display: 'block',
+        fontSize: '14px',
+        fontWeight: 500,
+        color: '#374151',
+        marginBottom: '4px'
+      }}>
         {label} {required && '*'}
       </label>
       <select
         value={value}
         onChange={(e) => onSelect(e.target.value)}
         disabled={disabled}
-        className={`w-full px-4 py-3 text-base border ${ error ? 'border-red-500' : 'border-gray-300' } rounded-xl focus:outline-none focus:ring-2 focus:ring-deepPink bg-white disabled:bg-gray-100`}
+        style={{
+          width: '100%',
+          padding: '12px 16px',
+          fontSize: '16px',
+          border: error ? '1px solid #EF4444' : '1px solid #D1D5DB',
+          borderRadius: '12px',
+          outline: 'none',
+          backgroundColor: disabled ? '#F3F4F6' : 'white',
+          cursor: disabled ? 'not-allowed' : 'pointer'
+        }}
+        onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px rgba(213, 0, 50, 0.2)'}
+        onBlur={(e) => e.target.style.boxShadow = 'none'}
       >
         <option value="">{disabled ? 'Loading...' : `Select ${label}`}</option>
         {options.map((option) => (
@@ -27,7 +44,11 @@ const SelectDropdown = ({ label, value, options, onSelect, required = false, dis
         ))}
       </select>
       {error && errorText && (
-        <p className="mt-1 text-xs text-red-600">{errorText}</p>
+        <p style={{
+          marginTop: '4px',
+          fontSize: '12px',
+          color: '#DC2626'
+        }}>{errorText}</p>
       )}
     </div>
   );
@@ -35,23 +56,42 @@ const SelectDropdown = ({ label, value, options, onSelect, required = false, dis
 
 // Input Field Component
 const InputField = ({ label, value, onChange, placeholder = '', required = false, error = false, errorText = '', type = 'text' }) => {
-   return (
-    <div className="w-full">
-       <label className="block text-sm font-medium text-gray-700 mb-1">
+  return (
+    <div style={{ width: '100%' }}>
+      <label style={{
+        display: 'block',
+        fontSize: '14px',
+        fontWeight: 500,
+        color: '#374151',
+        marginBottom: '4px'
+      }}>
         {label} {required && '*'}
       </label>
-       <input
-            type={type}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder || label}
-            className={`w-full px-4 py-3 text-base border ${ error ? 'border-red-500' : 'border-gray-300' } rounded-xl focus:outline-none focus:ring-2 focus:ring-deepPink`}
-        />
-         {error && errorText && (
-            <p className="mt-1 text-xs text-red-600">{errorText}</p>
-         )}
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder || label}
+        style={{
+          width: '100%',
+          padding: '12px 16px',
+          fontSize: '16px',
+          border: error ? '1px solid #EF4444' : '1px solid #D1D5DB',
+          borderRadius: '12px',
+          outline: 'none'
+        }}
+        onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px rgba(213, 0, 50, 0.2)'}
+        onBlur={(e) => e.target.style.boxShadow = 'none'}
+      />
+      {error && errorText && (
+        <p style={{
+          marginTop: '4px',
+          fontSize: '12px',
+          color: '#DC2626'
+        }}>{errorText}</p>
+      )}
     </div>
-   );
+  );
 };
 
 // --- Main Edit Profile Page Component ---
@@ -77,21 +117,21 @@ function EditProfilePageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
-  const [validationErrors, setValidationErrors] = useState({}); // For field-specific errors
+  const [validationErrors, setValidationErrors] = useState({});
 
   // --- Validation ---
   const validateForm = () => {
-      const errors = {};
-      if (!phone) errors.phone = "Phone number is required."; //
-      if (!selectedBase) errors.baseLocation = "Main location is required."; //
-      if (!selectedSub) errors.subLocation = "Area is required."; //
-      setValidationErrors(errors);
-      return Object.keys(errors).length === 0;
+    const errors = {};
+    if (!phone) errors.phone = "Phone number is required.";
+    if (!selectedBase) errors.baseLocation = "Main location is required.";
+    if (!selectedSub) errors.subLocation = "Area is required.";
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const isFormValid = !validationErrors.phone && !validationErrors.baseLocation && !validationErrors.subLocation;
 
-   // --- Fetch Locations ---
+  // --- Fetch Locations ---
   useEffect(() => {
     const fetchLocations = async () => {
       try {
@@ -113,7 +153,7 @@ function EditProfilePageContent() {
 
   // --- Fetch Current Profile Data ---
   useEffect(() => {
-    if (!user || baseLocationOptions.length === 0) return; // Wait for user and locations
+    if (!user || baseLocationOptions.length === 0) return;
 
     setIsLoading(true);
     const userDocRef = doc(db, 'users', user.uid);
@@ -121,24 +161,21 @@ function EditProfilePageContent() {
       .then(docSnap => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setName(data.name || user.displayName || ''); //
-          setPhone(data.phone || ''); //
-          setBuilding(data.building || ''); //
-          setFloor(data.floor || ''); //
-          setRoom(data.room || ''); //
-          // Set location dropdowns
+          setName(data.name || user.displayName || '');
+          setPhone(data.phone || '');
+          setBuilding(data.building || '');
+          setFloor(data.floor || '');
+          setRoom(data.room || '');
           const savedBase = data.baseLocation || '';
           if (savedBase && allLocations[savedBase]) {
-             setSelectedBase(savedBase); //
-             setSubLocationOptions(allLocations[savedBase]);
-             setSelectedSub(data.subLocation || ''); //
+            setSelectedBase(savedBase);
+            setSubLocationOptions(allLocations[savedBase]);
+            setSelectedSub(data.subLocation || '');
           } else {
-              // Handle case where saved location is invalid or not set
-              setSelectedBase('');
-              setSubLocationOptions([]);
-              setSelectedSub('');
+            setSelectedBase('');
+            setSubLocationOptions([]);
+            setSelectedSub('');
           }
-
         } else {
           setError("Profile data not found.");
         }
@@ -148,21 +185,20 @@ function EditProfilePageContent() {
         setError("Could not load profile details.");
       })
       .finally(() => setIsLoading(false));
-  }, [user, allLocations, baseLocationOptions]); // Depend on user and fetched locations
+  }, [user, allLocations, baseLocationOptions]);
 
-
-   // --- Handle location selections ---
+  // --- Handle location selections ---
   const handleBaseSelect = (base) => {
     setSelectedBase(base);
     setSubLocationOptions(allLocations[base] || []);
-    setSelectedSub(''); // Reset sub-location
-    setValidationErrors(prev => ({...prev, baseLocation: '', subLocation: ''})); // Clear errors
-  };
-  const handleSubSelect = (sub) => {
-      setSelectedSub(sub);
-      setValidationErrors(prev => ({...prev, subLocation: ''})); // Clear error
+    setSelectedSub('');
+    setValidationErrors(prev => ({ ...prev, baseLocation: '', subLocation: '' }));
   };
 
+  const handleSubSelect = (sub) => {
+    setSelectedSub(sub);
+    setValidationErrors(prev => ({ ...prev, subLocation: '' }));
+  };
 
   // --- Handle Save Changes ---
   const handleSaveChanges = async (e) => {
@@ -173,109 +209,235 @@ function EditProfilePageContent() {
     setError('');
 
     const profileUpdates = {};
-    if (name !== (user.displayName || '')) profileUpdates.displayName = name; // Only update if changed
+    if (name !== (user.displayName || '')) profileUpdates.displayName = name;
 
-    const firestoreUpdates = { //
-        name: name || 'Yumzy User',
-        phone: phone,
-        baseLocation: selectedBase,
-        subLocation: selectedSub,
-        building: building,
-        floor: floor,
-        room: room,
+    const firestoreUpdates = {
+      name: name || 'Yumzy User',
+      phone: phone,
+      baseLocation: selectedBase,
+      subLocation: selectedSub,
+      building: building,
+      floor: floor,
+      room: room,
     };
 
     try {
-        // Update Firebase Auth display name if changed
-        if (Object.keys(profileUpdates).length > 0) {
-             await updateProfile(user, profileUpdates); //
-             console.log("Firebase Auth profile updated");
-        }
+      if (Object.keys(profileUpdates).length > 0) {
+        await updateProfile(user, profileUpdates);
+        console.log("Firebase Auth profile updated");
+      }
 
-        // Update Firestore document
-        const userDocRef = doc(db, 'users', user.uid);
-        await updateDoc(userDocRef, firestoreUpdates); //
-        console.log("Firestore profile updated");
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, firestoreUpdates);
+      console.log("Firestore profile updated");
 
-        // Navigate back (pass a flag if needed, but router.back() is simpler)
-         alert("Profile Updated Successfully!"); // Simple feedback
-         router.back(); // Go back to the previous screen (Account Page)
-
+      alert("Profile Updated Successfully!");
+      router.back();
     } catch (err) {
-        console.error("Error updating profile:", err);
-        setError("Failed to save changes. Please try again.");
-        setIsSaving(false);
+      console.error("Error updating profile:", err);
+      setError("Failed to save changes. Please try again.");
+      setIsSaving(false);
     }
-    // No finally block needed here as we navigate away on success
   };
 
   if (isLoading) {
-      return <LoadingSpinner />;
+    return <LoadingSpinner />;
   }
 
   return (
-     <div className="min-h-screen bg-lightGray pb-10">
-        {/* Top Bar */}
-         <div className="sticky top-0 z-30 bg-white shadow-sm p-3 flex items-center space-x-2">
-            <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-gray-100" disabled={isSaving}>
-                <ArrowLeftIcon className="w-6 h-6 text-gray-700" />
-            </button>
-            <h1 className="text-lg font-bold text-gray-800 truncate flex-1">Edit Profile</h1>
-         </div>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#F5F5F5',
+      paddingBottom: '40px'
+    }}>
+      {/* Top Bar */}
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+        backgroundColor: 'white',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+        padding: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }}>
+        <button
+          onClick={() => router.back()}
+          disabled={isSaving}
+          style={{
+            padding: '8px',
+            borderRadius: '9999px',
+            border: 'none',
+            backgroundColor: 'transparent',
+            cursor: isSaving ? 'not-allowed' : 'pointer',
+            transition: 'background-color 0.2s'
+          }}
+          onMouseEnter={(e) => !isSaving && (e.currentTarget.style.backgroundColor = '#F3F4F6')}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          <ArrowLeftIcon style={{ width: '24px', height: '24px', color: '#374151' }} />
+        </button>
+        <h1 style={{
+          fontSize: '18px',
+          fontWeight: 700,
+          color: '#1F2937',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          flex: 1
+        }}>
+          Edit Profile
+        </h1>
+      </div>
 
-         {/* Form Content */}
-         <form onSubmit={handleSaveChanges} className="p-4 space-y-5">
-            {error && (
-                <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm flex items-center space-x-2">
-                    <ExclamationCircleIcon className="w-5 h-5"/>
-                    <span>{error}</span>
-                </div>
-            )}
+      {/* Form Content */}
+      <form onSubmit={handleSaveChanges} style={{
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px'
+      }}>
+        {error && (
+          <div style={{
+            padding: '12px',
+            backgroundColor: '#FEE2E2',
+            color: '#991B1B',
+            borderRadius: '8px',
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <ExclamationCircleIcon style={{ width: '20px', height: '20px' }} />
+            <span>{error}</span>
+          </div>
+        )}
 
-            <InputField label="Your Name" value={name} onChange={setName} />
-            <InputField label="Phone Number" value={phone} onChange={setPhone} type="tel" required
-                        error={!!validationErrors.phone} errorText={validationErrors.phone} />
+        <InputField label="Your Name" value={name} onChange={setName} />
+        <InputField
+          label="Phone Number"
+          value={phone}
+          onChange={setPhone}
+          type="tel"
+          required
+          error={!!validationErrors.phone}
+          errorText={validationErrors.phone}
+        />
 
-            <SelectDropdown
-                label="Main Location" value={selectedBase} options={baseLocationOptions}
-                onSelect={handleBaseSelect} required
-                error={!!validationErrors.baseLocation} errorText={validationErrors.baseLocation} />
+        <SelectDropdown
+          label="Main Location"
+          value={selectedBase}
+          options={baseLocationOptions}
+          onSelect={handleBaseSelect}
+          required
+          error={!!validationErrors.baseLocation}
+          errorText={validationErrors.baseLocation}
+        />
 
-            <SelectDropdown
-                label="Your Area" value={selectedSub} options={subLocationOptions}
-                onSelect={handleSubSelect} required disabled={!selectedBase}
-                error={!!validationErrors.subLocation} errorText={validationErrors.subLocation} />
+        <SelectDropdown
+          label="Your Area"
+          value={selectedSub}
+          options={subLocationOptions}
+          onSelect={handleSubSelect}
+          required
+          disabled={!selectedBase}
+          error={!!validationErrors.subLocation}
+          errorText={validationErrors.subLocation}
+        />
 
-            <InputField label="Building Name / Detail Home Address" value={building} onChange={setBuilding} />
+        <InputField
+          label="Building Name / Detail Home Address"
+          value={building}
+          onChange={setBuilding}
+        />
 
-            <div className="flex gap-4">
-                <InputField label="Floor No." value={floor} onChange={setFloor} />
-                <InputField label="Room No." value={room} onChange={setRoom} />
-            </div>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <InputField label="Floor No." value={floor} onChange={setFloor} />
+          <InputField label="Room No." value={room} onChange={setRoom} />
+        </div>
 
-            <button
-                type="submit"
-                disabled={!isFormValid || isSaving}
-                className={`w-full h-[50px] mt-4 flex items-center justify-center rounded-xl text-base font-semibold transition text-white ${
-                     (!isFormValid || isSaving)
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-darkPink hover:bg-opacity-90'
-                }`}
-            >
-                {isSaving ? (
-                     <>
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" /* SVG copied from checkout */>...</svg>
-                        Saving...
-                    </>
-                ) : (
-                     <>
-                        <CheckIcon className="w-5 h-5 mr-2"/>
-                        Save Changes
-                    </>
-                )}
-            </button>
-         </form>
-     </div>
+        <button
+          type="submit"
+          disabled={!isFormValid || isSaving}
+          style={{
+            width: '100%',
+            height: '50px',
+            marginTop: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '12px',
+            fontSize: '16px',
+            fontWeight: 600,
+            transition: 'all 0.2s',
+            color: 'white',
+            backgroundColor: (!isFormValid || isSaving) ? '#9CA3AF' : '#B70314',
+            cursor: (!isFormValid || isSaving) ? 'not-allowed' : 'pointer',
+            border: 'none',
+            opacity: (!isFormValid || isSaving) ? 0.7 : 1
+          }}
+          onMouseEnter={(e) => {
+            if (!(!isFormValid || isSaving)) {
+              e.currentTarget.style.opacity = '0.9';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!(!isFormValid || isSaving)) {
+              e.currentTarget.style.opacity = '1';
+            }
+          }}
+        >
+          {isSaving ? (
+            <>
+              <svg
+                style={{
+                  animation: 'spin 1s linear infinite',
+                  marginLeft: '-4px',
+                  marginRight: '12px',
+                  height: '20px',
+                  width: '20px',
+                  color: 'white'
+                }}
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  style={{ opacity: 0.25 }}
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  style={{ opacity: 0.75 }}
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              Saving...
+            </>
+          ) : (
+            <>
+              <CheckIcon style={{ width: '20px', height: '20px', marginRight: '8px' }} />
+              Save Changes
+            </>
+          )}
+        </button>
+      </form>
+      <style jsx>{`
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
+    </div>
   );
 }
 

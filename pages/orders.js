@@ -1,193 +1,375 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import ProtectedRoute from '../components/ProtectedRoute'; // Adjust path
-import { useAuth } from '../context/AuthContext'; // Adjust path
-import { db } from '../firebase/config'; // Adjust path
+import ProtectedRoute from '../components/ProtectedRoute';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase/config';
 import { collection, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
-import LoadingSpinner from '../components/LoadingSpinner'; // Adjust path
-import { InformationCircleIcon, MapPinIcon, ShoppingBagIcon, ClockIcon, ArrowRightIcon, XMarkIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid'; // Solid Icons
+import LoadingSpinner from '../components/LoadingSpinner';
+import { InformationCircleIcon, MapPinIcon, ShoppingBagIcon, ClockIcon, ArrowRightIcon, XMarkIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 
-// --- Helper Functions (from OrdersScreen.kt) ---
-
-// Format Firestore Timestamp to readable Date and Time
+// --- Helper Functions ---
 const formatTimestamp = (timestamp) => {
   if (!timestamp || typeof timestamp.toDate !== 'function') {
     return 'Invalid Date';
   }
   const date = timestamp.toDate();
-  // Example format: Oct 21, 2025 at 11:30 AM
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
          ' at ' +
          date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 };
-// Format Timestamp to just Date (Short)
+
 const formatDateShort = (timestamp) => {
-    if (!timestamp || typeof timestamp.toDate !== 'function') return '';
-    return timestamp.toDate().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (!timestamp || typeof timestamp.toDate !== 'function') return '';
+  return timestamp.toDate().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 };
-// Format Timestamp to just Time
+
 const formatTime = (timestamp) => {
-    if (!timestamp || typeof timestamp.toDate !== 'function') return '';
-    return timestamp.toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  if (!timestamp || typeof timestamp.toDate !== 'function') return '';
+  return timestamp.toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 };
 
-// Get color based on status (similar to getStatusColor)
 const getStatusColor = (status = '') => {
-    switch (status.toLowerCase()) {
-        case "pending": return 'text-orange-500 bg-orange-100'; // text color, background color
-        case "confirmed": return 'text-blue-500 bg-blue-100'; //
-        case "preparing": return 'text-green-600 bg-green-100'; //
-        case "delivered": return 'text-green-600 bg-green-100'; //
-        case "cancelled": return 'text-red-500 bg-red-100'; //
-        case "accepted": return 'text-pink-600 bg-pink-100'; // Adapted 'accepted' color
-        default: return 'text-gray-500 bg-gray-100'; //
-    }
+  switch (status.toLowerCase()) {
+    case "pending": return { text: '#F97316', bg: '#FFEDD5' };
+    case "confirmed": return { text: '#3B82F6', bg: '#DBEAFE' };
+    case "preparing": return { text: '#16A34A', bg: '#DCFCE7' };
+    case "delivered": return { text: '#16A34A', bg: '#DCFCE7' };
+    case "cancelled": return { text: '#EF4444', bg: '#FEE2E2' };
+    case "accepted": return { text: '#DB2777', bg: '#FCE7F3' };
+    default: return { text: '#6B7280', bg: '#F3F4F6' };
+  }
 };
 
-// --- Reusable Components ---
-
-// Order Card (similar to ModernOrderCard)
+// --- Order Card ---
 const OrderCard = ({ order, onClick }) => {
-    const statusColors = getStatusColor(order.orderStatus);
-    const itemCountText = order.items.length === 1 ? '1 item' : `${order.items.length} items`; //
+  const statusColors = getStatusColor(order.orderStatus);
+  const itemCountText = order.items.length === 1 ? '1 item' : `${order.items.length} items`;
 
-    return (
-        <div
-            onClick={onClick}
-            className="bg-white rounded-xl shadow cursor-pointer transition hover:shadow-md"
-        >
-            <div className="p-4 space-y-2.5">
-                {/* Header: Restaurant & Status */}
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-2 min-w-0">
-                       <BuildingStorefrontIcon className={`w-5 h-5 flex-shrink-0 ${statusColors.split(' ')[0]}`}/> {/* Use text color */}
-                       <span className="font-bold text-gray-800 text-sm truncate">{order.restaurantName}</span>
-                    </div>
-                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusColors}`}>
-                        {order.orderStatus}
-                     </span>
-                </div>
-
-                 {/* Info Row: Items, Date, Time */}
-                <div className="flex items-center space-x-2 text-xs text-gray-500 flex-wrap">
-                    <div className="flex items-center space-x-1">
-                        <ShoppingBagIcon className="w-3.5 h-3.5"/>
-                        <span>{itemCountText}</span>
-                    </div>
-                    <span className="text-gray-300">•</span>
-                    <span>{formatDateShort(order.createdAt)}</span>
-                     <span className="text-gray-300">•</span>
-                    <div className="flex items-center space-x-1">
-                        <ClockIcon className="w-3.5 h-3.5"/>
-                        <span>{formatTime(order.createdAt)}</span>
-                    </div>
-                </div>
-
-                {/* Footer: Price & View Button */}
-                <div className="flex justify-between items-center pt-1">
-                     <div className="flex items-baseline space-x-1">
-                        <span className="text-sm text-gray-700">Total:</span>
-                        <span className="text-base font-bold text-gray-800">৳{order.totalPrice?.toFixed(0)}</span>
-                     </div>
-                     <button className={`flex items-center space-x-1 text-xs font-semibold ${statusColors.split(' ')[0]} hover:opacity-80`}>
-                        <span>View Details</span>
-                        <ArrowRightIcon className="w-3.5 h-3.5"/>
-                     </button>
-                </div>
-            </div>
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+        cursor: 'pointer',
+        transition: 'box-shadow 0.2s'
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}
+      onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1)'}
+    >
+      <div style={{
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px'
+      }}>
+        {/* Header: Restaurant & Status */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            minWidth: 0
+          }}>
+            <BuildingStorefrontIcon style={{
+              width: '20px',
+              height: '20px',
+              flexShrink: 0,
+              color: statusColors.text
+            }} />
+            <span style={{
+              fontWeight: 700,
+              color: '#1F2937',
+              fontSize: '14px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>{order.restaurantName}</span>
+          </div>
+          <span style={{
+            padding: '2px 10px',
+            borderRadius: '9999px',
+            fontSize: '12px',
+            fontWeight: 600,
+            color: statusColors.text,
+            backgroundColor: statusColors.bg
+          }}>
+            {order.orderStatus}
+          </span>
         </div>
-    );
+
+        {/* Info Row */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '12px',
+          color: '#6B7280',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <ShoppingBagIcon style={{ width: '14px', height: '14px' }} />
+            <span>{itemCountText}</span>
+          </div>
+          <span style={{ color: '#D1D5DB' }}>•</span>
+          <span>{formatDateShort(order.createdAt)}</span>
+          <span style={{ color: '#D1D5DB' }}>•</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <ClockIcon style={{ width: '14px', height: '14px' }} />
+            <span>{formatTime(order.createdAt)}</span>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingTop: '4px'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '4px'
+          }}>
+            <span style={{ fontSize: '14px', color: '#374151' }}>Total:</span>
+            <span style={{
+              fontSize: '16px',
+              fontWeight: 700,
+              color: '#1F2937'
+            }}>৳{order.totalPrice?.toFixed(0)}</span>
+          </div>
+          <button style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '12px',
+            fontWeight: 600,
+            color: statusColors.text,
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            opacity: 1,
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+          >
+            <span>View Details</span>
+            <ArrowRightIcon style={{ width: '14px', height: '14px' }} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
-// Order Details Modal (similar to EnhancedOrderDetailsDialog)
+// --- Order Details Modal ---
 const OrderDetailsModal = ({ order, onClose }) => {
-    if (!order) return null;
-    const itemsSubtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  if (!order) return null;
+  const itemsSubtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-    return (
-         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
-                {/* Header */}
-                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                    <h2 className="text-lg font-bold text-gray-800">Order Summary</h2>
-                     <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100">
-                         <XMarkIcon className="w-5 h-5 text-gray-500"/>
-                    </button>
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 100,
+      padding: '16px',
+      backdropFilter: 'blur(4px)'
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+        width: '100%',
+        maxWidth: '448px',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '16px',
+          borderBottom: '1px solid #E5E7EB',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <h2 style={{
+            fontSize: '18px',
+            fontWeight: 700,
+            color: '#1F2937'
+          }}>Order Summary</h2>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '4px',
+              borderRadius: '9999px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <XMarkIcon style={{ width: '20px', height: '20px', color: '#6B7280' }} />
+          </button>
+        </div>
+
+        {/* Scrollable Content */}
+        <div style={{
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          overflowY: 'auto'
+        }}>
+          <p style={{ fontWeight: 600, color: '#1F2937' }}>{order.restaurantName}</p>
+          <p style={{ fontSize: '12px', color: '#6B7280' }}>Ordered on {formatTimestamp(order.createdAt)}</p>
+          <p style={{
+            fontSize: '14px',
+            fontWeight: 600,
+            color: getStatusColor(order.orderStatus).text
+          }}>
+            Status: {order.orderStatus}
+          </p>
+
+          <h3 style={{
+            fontSize: '14px',
+            fontWeight: 700,
+            paddingTop: '8px'
+          }}>Items:</h3>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+            fontSize: '14px'
+          }}>
+            {order.items.map((item, index) => (
+              <div key={index} style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start'
+              }}>
+                <div style={{ flex: 1, marginRight: '8px' }}>
+                  <span style={{ color: '#374151' }}>{item.quantity} x {item.name}</span>
+                  {item.miniResName && (
+                    <span style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      color: '#6B7280',
+                      marginLeft: '16px'
+                    }}>from {item.miniResName}</span>
+                  )}
                 </div>
+                <span style={{
+                  fontWeight: 500,
+                  color: '#1F2937',
+                  whiteSpace: 'nowrap'
+                }}>৳{(item.price * item.quantity).toFixed(0)}</span>
+              </div>
+            ))}
+          </div>
 
-                {/* Scrollable Content */}
-                <div className="p-4 space-y-4 overflow-y-auto">
-                    <p className="font-semibold text-gray-800">{order.restaurantName}</p>
-                    <p className="text-xs text-gray-500">Ordered on {formatTimestamp(order.createdAt)}</p>
-                    <p className={`text-sm font-semibold ${getStatusColor(order.orderStatus).split(' ')[0]}`}>
-                        Status: {order.orderStatus}
-                    </p>
+          <hr style={{ margin: '8px 0', borderColor: '#E5E7EB' }} />
 
-                    <h3 className="text-sm font-bold pt-2">Items:</h3>
-                    <div className="space-y-1.5 text-sm">
-                        {order.items.map((item, index) => (
-                            <div key={index} className="flex justify-between items-start">
-                                <div className="flex-1 mr-2">
-                                     <span className="text-gray-700">{item.quantity} x {item.name}</span>
-                                      {item.miniResName && <span className="block text-xs text-gray-500 ml-4">from {item.miniResName}</span>}
-                                </div>
-
-                                <span className="font-medium text-gray-800 whitespace-nowrap">৳{(item.price * item.quantity).toFixed(0)}</span>
-                            </div>
-                        ))}
-                    </div>
-
-                    <hr className="my-2 border-gray-200"/>
-
-                    {/* Price Details */}
-                     <div className="space-y-1 text-sm">
-                         <div className="flex justify-between"><span className="text-gray-600">Items Subtotal</span><span className="font-medium">৳{itemsSubtotal.toFixed(0)}</span></div>
-                         {order.deliveryCharge > 0 && <div className="flex justify-between"><span className="text-gray-600">Delivery Charge</span><span className="font-medium">৳{order.deliveryCharge.toFixed(0)}</span></div>}
-                         {order.serviceCharge > 0 && <div className="flex justify-between"><span className="text-gray-600">Service Charge</span><span className="font-medium">৳{order.serviceCharge.toFixed(0)}</span></div>}
-                         <hr className="my-1 border-gray-200"/>
-                         <div className="flex justify-between font-bold text-base text-deepPink"><span >Total Payable</span><span>৳{order.totalPrice.toFixed(0)}</span></div>
-                     </div>
-                </div>
-                 {/* Close Button Footer */}
-                <div className="p-4 border-t border-gray-200">
-                     <button
-                        onClick={onClose}
-                        className="w-full h-[45px] flex items-center justify-center bg-darkPink text-white rounded-lg text-sm font-semibold transition hover:bg-opacity-90"
-                     >
-                        Close
-                    </button>
-                </div>
+          {/* Price Details */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            fontSize: '14px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#4B5563' }}>Items Subtotal</span>
+              <span style={{ fontWeight: 500 }}>৳{itemsSubtotal.toFixed(0)}</span>
             </div>
-         </div>
-    );
-};
+            {order.deliveryCharge > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#4B5563' }}>Delivery Charge</span>
+                <span style={{ fontWeight: 500 }}>৳{order.deliveryCharge.toFixed(0)}</span>
+              </div>
+            )}
+            {order.serviceCharge > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#4B5563' }}>Service Charge</span>
+                <span style={{ fontWeight: 500 }}>৳{order.serviceCharge.toFixed(0)}</span>
+              </div>
+            )}
+            <hr style={{ margin: '4px 0', borderColor: '#E5E7EB' }} />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontWeight: 700,
+              fontSize: '16px',
+              color: '#D50032'
+            }}>
+              <span>Total Payable</span>
+              <span>৳{order.totalPrice.toFixed(0)}</span>
+            </div>
+          </div>
+        </div>
 
+        {/* Close Button Footer */}
+        <div style={{
+          padding: '16px',
+          borderTop: '1px solid #E5E7EB'
+        }}>
+          <button
+            onClick={onClose}
+            style={{
+              width: '100%',
+              height: '45px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#B70314',
+              color: 'white',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: 600,
+              transition: 'opacity 0.2s',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // --- Main Orders Page Component ---
 function OrdersPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { showAd } = router.query; // Check if showAd=true is in the URL
+  const { showAd } = router.query;
 
-  const [orders, setOrders] = useState([]); // Order[]
+  const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState(null); // The order to show in the modal
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
-   // --- Ad Logic ---
+  // --- Ad Logic ---
   useEffect(() => {
     if (showAd === 'true') {
-        console.log("Orders page loaded with showAd=true");
-        // !! IMPORTANT: Implement your Ad logic here !!
-        // This might involve calling a function from an Ad SDK.
-        // For now, we'll just log it.
-        // Example: AdMob.showInterstitialAd();
-
-        // Optional: Remove the query param after showing ad to prevent re-trigger on refresh
-        // router.replace('/orders', undefined, { shallow: true });
+      console.log("Orders page loaded with showAd=true");
     }
   }, [showAd, router]);
-
 
   // --- Fetch Orders ---
   useEffect(() => {
@@ -198,30 +380,29 @@ function OrdersPage() {
     const ordersQuery = query(
       collection(db, 'orders'),
       where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc') // Show newest first
+      orderBy('createdAt', 'desc')
     );
 
     getDocs(ordersQuery)
       .then(snapshot => {
         const fetchedOrders = snapshot.docs.map(doc => {
-             const data = doc.data();
-             // Ensure items array exists and price is a number
-             const items = (data.items || []).map(item => ({
-                 name: item.itemName || item.name || 'Unknown Item', // Handle potential old data field name
-                 quantity: Number(item.quantity) || 0,
-                 price: Number(item.itemPrice || item.price) || 0.0, // Handle potential old data field name
-                 miniResName: item.miniResName || '', //
-             }));
-             return {
-                id: doc.id, //
-                restaurantName: data.restaurantName || 'Unknown Restaurant', //
-                totalPrice: Number(data.totalPrice) || 0.0, //
-                orderStatus: data.orderStatus || 'Unknown', //
-                createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now(), // Ensure it's a Timestamp
-                items: items, //
-                deliveryCharge: Number(data.deliveryCharge) || 0.0, //
-                serviceCharge: Number(data.serviceCharge) || 0.0, //
-             };
+          const data = doc.data();
+          const items = (data.items || []).map(item => ({
+            name: item.itemName || item.name || 'Unknown Item',
+            quantity: Number(item.quantity) || 0,
+            price: Number(item.itemPrice || item.price) || 0.0,
+            miniResName: item.miniResName || '',
+          }));
+          return {
+            id: doc.id,
+            restaurantName: data.restaurantName || 'Unknown Restaurant',
+            totalPrice: Number(data.totalPrice) || 0.0,
+            orderStatus: data.orderStatus || 'Unknown',
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now(),
+            items: items,
+            deliveryCharge: Number(data.deliveryCharge) || 0.0,
+            serviceCharge: Number(data.serviceCharge) || 0.0,
+          };
         });
         setOrders(fetchedOrders);
       })
@@ -230,56 +411,111 @@ function OrdersPage() {
         setError("Failed to load your orders.");
       })
       .finally(() => setIsLoading(false));
-
-  }, [user]); // Re-fetch if user changes
+  }, [user]);
 
   return (
-    <div className="min-h-screen bg-lightGray pb-10"> {/* Ensure content clears bottom nav */}
-         {/* Custom Top Bar */}
-         <div className="bg-darkPink text-white pt-10 pb-5 px-4 rounded-b-[20px] shadow-md sticky top-0 z-10">
-            <h1 className="text-xl font-bold text-center">My Orders</h1>
-       </div>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#F5F5F5',
+      paddingBottom: '40px'
+    }}>
+      {/* Custom Top Bar */}
+      <div style={{
+        background: 'linear-gradient(to bottom, #B70314, #8B0A10)',
+        color: 'white',
+        paddingTop: '40px',
+        paddingBottom: '20px',
+        paddingLeft: '16px',
+        paddingRight: '16px',
+        borderBottomLeftRadius: '20px',
+        borderBottomRightRadius: '20px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 10
+      }}>
+        <h1 style={{
+          fontSize: '20px',
+          fontWeight: 700,
+          textAlign: 'center'
+        }}>My Orders</h1>
+      </div>
 
-       {/* Content Area */}
-       <div className="p-4 space-y-4">
+      {/* Content Area */}
+      <div style={{
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px'
+      }}>
         {isLoading && (
-          <div className="flex justify-center pt-20">
-             <p>Loading orders...</p> {/* Or use LoadingSpinner */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            paddingTop: '80px'
+          }}>
+            <p>Loading orders...</p>
           </div>
         )}
 
         {!isLoading && error && (
-          <div className="flex flex-col items-center justify-center pt-20 text-center text-red-600">
-            <InformationCircleIcon className="w-12 h-12 mb-3"/>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingTop: '80px',
+            textAlign: 'center',
+            color: '#DC2626'
+          }}>
+            <InformationCircleIcon style={{
+              width: '48px',
+              height: '48px',
+              marginBottom: '12px'
+            }} />
             <p>{error}</p>
           </div>
         )}
 
         {!isLoading && !error && orders.length === 0 && (
-          // Empty State
-          <div className="flex flex-col items-center justify-center pt-20 text-center">
-             <InformationCircleIcon className="w-16 h-16 text-gray-300 mb-4"/>
-             <p className="text-lg font-medium text-gray-500">You haven't placed any orders yet.</p>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingTop: '80px',
+            textAlign: 'center'
+          }}>
+            <InformationCircleIcon style={{
+              width: '64px',
+              height: '64px',
+              color: '#D1D5DB',
+              marginBottom: '16px'
+            }} />
+            <p style={{
+              fontSize: '18px',
+              fontWeight: 500,
+              color: '#6B7280'
+            }}>You haven't placed any orders yet.</p>
           </div>
         )}
 
-         {!isLoading && !error && orders.length > 0 && (
-            // Orders List
-            orders.map(order => (
-                <OrderCard
-                    key={order.id}
-                    order={order}
-                    onClick={() => setSelectedOrder(order)}
-                />
-            ))
-         )}
-       </div>
+        {!isLoading && !error && orders.length > 0 && (
+          orders.map(order => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              onClick={() => setSelectedOrder(order)}
+            />
+          ))
+        )}
+      </div>
 
-       {/* Details Modal */}
-        <OrderDetailsModal
-            order={selectedOrder}
-            onClose={() => setSelectedOrder(null)}
-        />
+      {/* Details Modal */}
+      <OrderDetailsModal
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+      />
     </div>
   );
 }
