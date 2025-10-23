@@ -10,18 +10,16 @@ export default function ProtectedRoute({ children }) {
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.push('/auth'); // Redirect to login if not authenticated
+        router.push('/auth');
       } else if (!profileExists) {
-        router.push('/details'); // Redirect to details if profile is incomplete
+        router.push('/details');
       }
     }
   }, [user, profileExists, loading, router]);
 
-  // Show loading spinner while checks are performed or if redirecting
   if (loading || !user || !profileExists) {
     return <LoadingSpinner />;
   }
 
-  // If authenticated and profile exists, render the child component (the actual page)
   return children;
 }

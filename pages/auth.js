@@ -1,12 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-// This is our Google icon. We can't import R.drawable, so we use an SVG.
+// Google icon component
 const GoogleIcon = () => (
-  <svg className="w-6 h-6" viewBox="0 0 48 48">
+  <svg style={{ width: '24px', height: '24px' }} viewBox="0 0 48 48">
     <path
       fill="#4285F4"
       d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l8.5 6.51C13.01 13.38 18.08 9.5 24 9.5z"
@@ -30,19 +30,19 @@ const GoogleIcon = () => (
 export default function AuthScreen() {
   const { user, profileExists, loading, googleSignIn } = useAuth();
   const router = useRouter();
+  const [isGoogleHovered, setIsGoogleHovered] = useState(false);
+  const [isEmailHovered, setIsEmailHovered] = useState(false);
+  const [isSignUpHovered, setIsSignUpHovered] = useState(false);
 
-  // --- Handle Google Sign-In ---
   const handleGoogleSignIn = async () => {
     try {
       await googleSignIn();
-      // The onAuthStateChanged listener in AuthContext will handle the redirect
     } catch (error) {
       console.error('Google Sign-In Error', error);
       alert('Failed to sign in with Google. Please try again.');
     }
   };
 
-  // --- Redirect logic ---
   useEffect(() => {
     if (!loading && user) {
       if (profileExists) {
@@ -57,76 +57,176 @@ export default function AuthScreen() {
     return <LoadingSpinner />;
   }
 
-  // --- This is the UI, translated from your AuthScreen.kt ---
   return (
-    <div className="flex flex-col min-h-screen bg-deepPink">
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: '100vh',
+      backgroundColor: '#D50032'
+    }}>
       {/* Top section */}
-      <div className="flex flex-col items-center pt-20 text-white">
-        <h1 className="text-3xl font-bold">Welcome to Yumzy🍕</h1>
-        <p className="mt-3 text-lg text-white/90">
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingTop: '80px',
+        color: 'white'
+      }}>
+        <h1 style={{
+          fontSize: '30px',
+          fontWeight: 700
+        }}>
+          Welcome to Yumzy🍕
+        </h1>
+        <p style={{
+          marginTop: '12px',
+          fontSize: '18px',
+          color: 'rgba(255, 255, 255, 0.9)'
+        }}>
           Let's satisfy those cravings together!
         </p>
-        <div className="mt-8 w-36 h-36 flex items-center justify-center">
-          {/* We don't have R.drawable, so let's use a simple emoji as a placeholder */}
-          <span className="text-8xl">🛍️</span>
+        <div style={{
+          marginTop: '32px',
+          width: '144px',
+          height: '144px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <span style={{ fontSize: '96px' }}>🛍️</span>
         </div>
       </div>
 
       {/* Bottom Card */}
-      <div className="flex-1 mt-8 bg-white rounded-t-[30px] flex flex-col items-center">
-        <div className="w-full max-w-sm p-8">
-          <h2 className="text-2xl font-bold text-center text-black">
+      <div style={{
+        flex: 1,
+        marginTop: '32px',
+        backgroundColor: 'white',
+        borderTopLeftRadius: '30px',
+        borderTopRightRadius: '30px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
+      }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '448px',
+          padding: '32px'
+        }}>
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: 700,
+            textAlign: 'center',
+            color: 'black'
+          }}>
             Sign up or Log in
           </h2>
-          <p className="mt-2 text-sm text-center text-gray-600">
+          <p style={{
+            marginTop: '8px',
+            fontSize: '14px',
+            textAlign: 'center',
+            color: '#4B5563'
+          }}>
             Select your preferred method to continue
           </p>
 
-          <div className="mt-8 space-y-4">
+          <div style={{ marginTop: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Continue with Google */}
             <button
               onClick={handleGoogleSignIn}
-              className="w-full h-[50px] flex items-center justify-center gap-4 border border-gray-300 rounded-xl transition hover:bg-gray-50"
+              onMouseEnter={() => setIsGoogleHovered(true)}
+              onMouseLeave={() => setIsGoogleHovered(false)}
+              style={{
+                width: '100%',
+                height: '50px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '16px',
+                border: '1px solid #D1D5DB',
+                borderRadius: '12px',
+                backgroundColor: isGoogleHovered ? '#F9FAFB' : 'white',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
             >
               <GoogleIcon />
-              <span className="text-base font-medium text-black">
+              <span style={{
+                fontSize: '16px',
+                fontWeight: 500,
+                color: 'black'
+              }}>
                 Continue with Google
               </span>
             </button>
 
             {/* Sign In with Email */}
-            <Link
-              href="/email-sign-in"
-              className="w-full h-[50px] flex items-center justify-center gap-4 bg-deepPink text-white rounded-xl transition hover:bg-opacity-90"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <Link href="/email-sign-in" passHref>
+              <div
+                onMouseEnter={() => setIsEmailHovered(true)}
+                onMouseLeave={() => setIsEmailHovered(false)}
+                style={{
+                  width: '100%',
+                  height: '50px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '16px',
+                  backgroundColor: '#D50032',
+                  color: 'white',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  opacity: isEmailHovered ? 0.9 : 1,
+                  transition: 'opacity 0.2s',
+                  textDecoration: 'none'
+                }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-              <span className="text-base font-medium">Sign In with Email</span>
+                <svg
+                  style={{ width: '24px', height: '24px' }}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                <span style={{ fontSize: '16px', fontWeight: 500 }}>Sign In with Email</span>
+              </div>
             </Link>
 
-            <div className="flex items-center">
-              <div className="flex-1 border-t border-gray-300"></div>
-              <span className="px-4 text-sm text-gray-500">or</span>
-              <div className="flex-1 border-t border-gray-300"></div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ flex: 1, borderTop: '1px solid #D1D5DB' }}></div>
+              <span style={{ padding: '0 16px', fontSize: '14px', color: '#6B7280' }}>or</span>
+              <div style={{ flex: 1, borderTop: '1px solid #D1D5DB' }}></div>
             </div>
 
             {/* Sign Up with Email */}
-            <Link
-              href="/email-sign-up"
-              className="w-full h-[50px] flex items-center justify-center gap-4 border border-gray-400 text-gray-700 rounded-xl transition hover:bg-gray-50"
-            >
-              <span className="text-base font-medium">Sign Up with Email</span>
+            <Link href="/email-sign-up" passHref>
+              <div
+                onMouseEnter={() => setIsSignUpHovered(true)}
+                onMouseLeave={() => setIsSignUpHovered(false)}
+                style={{
+                  width: '100%',
+                  height: '50px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '16px',
+                  border: '1px solid #9CA3AF',
+                  color: '#374151',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  backgroundColor: isSignUpHovered ? '#F9FAFB' : 'white',
+                  transition: 'background-color 0.2s',
+                  textDecoration: 'none'
+                }}
+              >
+                <span style={{ fontSize: '16px', fontWeight: 500 }}>Sign Up with Email</span>
+              </div>
             </Link>
           </div>
         </div>
