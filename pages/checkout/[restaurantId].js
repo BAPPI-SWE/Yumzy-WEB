@@ -174,12 +174,26 @@ function CheckoutPageContent() {
       .finally(() => setIsLoadingProfile(false));
   }, [user]);
 
+  // --- Fetch/Calculate Charges (Replicating CheckoutScreen.kt logic) ---
   useEffect(() => {
-    if (!userProfile || !restaurantId) return;
+    // Make sure userProfile is loaded and restaurantId is available
+    if (!userProfile || !restaurantId || !userProfile.baseLocation || !userProfile.subLocation) {
+        // If profile details needed for calculation are missing, maybe set default charges or wait
+        // Setting defaults here if profile location isn't set yet might be why it seems static
+        if (router.isReady && userProfile) { // Check if router is ready and profile attempted load
+             setError("Location details missing in profile. Using default charges.");
+             setDeliveryCharge(20.0);
+             setServiceCharge(5.0);
+             setIsLoadingCharges(false);
+        }
+        return; // Wait for complete userProfile
+    }
 
     const calculateCharges = async () => {
+      console.log("--- Starting Charge Calculation ---"); // Log: Start
       setIsLoadingCharges(true);
       setError('');
+      // Default values
       let baseDelivery = 20.0;
       let baseService = 5.0;
       let additionalDelivery = 0.0;
@@ -188,73 +202,131 @@ function CheckoutPageContent() {
       const baseLocation = userProfile.baseLocation;
       const subLocation = userProfile.subLocation;
 
+      console.log(`User Location: Base='${baseLocation}', Sub='${subLocation}'`); // Log: User Location
+
+      // Skip calculation if essential location info is missing (already checked above, but double-check)
       if (!baseLocation || !subLocation) {
-        setError("Please complete your location details in your profile.");
-        setIsLoadingCharges(false);
-        setDeliveryCharge(baseDelivery);
-        setServiceCharge(baseService);
-        return;
+          setError("Please complete your location details in your profile.");
+          setIsLoadingCharges(false);
+          setDeliveryCharge(baseDelivery); // Set defaults
+          setServiceCharge(baseService);
+          console.log("--- Charge Calculation ENDED (Missing Location) ---"); // Log: End (Error)
+          return;
       }
 
       try {
+        // 1. Get base charges from location
+        console.log(`Querying 'locations' where name == '${baseLocation}'`); // Log: Query Start
         const locQuery = query(collection(db, 'locations'), where('name', '==', baseLocation));
         const locSnap = await getDocs(locQuery);
 
         if (!locSnap.empty) {
           const locData = locSnap.docs[0].data();
+          console.log("Location Data Found:", locData); // Log: Location Data
+
           const subLocations = locData.subLocations || [];
           const subIndex = subLocations.indexOf(subLocation);
+          console.log(`SubLocations Array: [${subLocations.join(', ')}], Found '${subLocation}' at index: ${subIndex}`); // Log: SubLocation Index
 
           if (subIndex !== -1) {
-            const deliveryKey = isPreOrder ? 'deliveryCharge' : 'deliveryChargeYumzy';
-            const serviceKey = isPreOrder ? 'serviceCharge' : 'serviceChargeYumzy';
-            const deliveryArray = locData[deliveryKey] || [];
-            const serviceArray = locData[serviceKey] || [];
+              const deliveryKey = isPreOrder ? 'deliveryCharge' : 'deliveryChargeYumzy';
+              const serviceKey = isPreOrder ? 'serviceCharge' : 'serviceChargeYumzy';
+              console.log(`Is PreOrder: ${isPreOrder}, Using keys: delivery='${deliveryKey}', service='${serviceKey}'`); // Log: Keys Used
 
-            if (subIndex < deliveryArray.length) baseDelivery = Number(deliveryArray[subIndex]) || baseDelivery;
-            if (subIndex < serviceArray.length) baseService = Number(serviceArray[subIndex]) || baseService;
+              const deliveryArray = locData[deliveryKey] || [];
+              const serviceArray = locData[serviceKey] || [];
+              console.log(`Delivery Charges Array:`, deliveryArray); // Log: Delivery Array
+              console.log(`Service Charges Array:`, serviceArray); // Log: Service Array
+
+
+              if (subIndex < deliveryArray.length) {
+                  const fetchedDelivery = Number(deliveryArray[subIndex]);
+                  if (!isNaN(fetchedDelivery)) {
+                      baseDelivery = fetchedDelivery;
+                  } else {
+                      console.warn(`Invalid number format for delivery charge at index ${subIndex}:`, deliveryArray[subIndex]);
+                  }
+              } else {
+                   console.warn(`SubLocation index ${subIndex} is out of bounds for delivery charges array (length ${deliveryArray.length})`);
+              }
+
+              if (subIndex < serviceArray.length) {
+                  const fetchedService = Number(serviceArray[subIndex]);
+                   if (!isNaN(fetchedService)) {
+                      baseService = fetchedService;
+                  } else {
+                       console.warn(`Invalid number format for service charge at index ${subIndex}:`, serviceArray[subIndex]);
+                  }
+              } else {
+                   console.warn(`SubLocation index ${subIndex} is out of bounds for service charges array (length ${serviceArray.length})`);
+              }
+              console.log(`Base charges calculated: Delivery=${baseDelivery}, Service=${baseService}`); // Log: Base Charges Result
+          } else {
+               console.warn(`User's subLocation '${subLocation}' not found in location document's subLocations array.`); // Log: SubLocation Not Found
           }
         } else {
-          console.warn(`Location document not found for: ${baseLocation}`);
+             console.warn(`Location document not found for baseLocation: '${baseLocation}'`); // Log: Base Location Not Found
+             // Keep default base charges if location doc is missing
         }
 
+        // 2. Get additional charges if it's the yumzy_store
         if (restaurantId === 'yumzy_store') {
+          console.log("Checking additional charges for yumzy_store items."); // Log: Yumzy Store Check
           const itemBaseIds = [...new Set(itemsForRestaurant.map(item => {
             const id = item.menuItem.id;
-            return id.includes('_') ? id.split('_')[0] : id;
+            return id.includes('_') ? id.split('_')[0] : id; // Get base ID before variant
           }))];
+          console.log("Base Item IDs for additional charges:", itemBaseIds); // Log: Item Base IDs
 
           if (itemBaseIds.length > 0) {
-            for (const baseId of itemBaseIds) {
-              try {
-                const itemDocRef = doc(db, 'store_items', baseId);
-                const itemDocSnap = await getDoc(itemDocRef);
-                if (itemDocSnap.exists()) {
-                  additionalDelivery += itemDocSnap.data().additionalDeliveryCharge || 0.0;
-                  additionalService += itemDocSnap.data().additionalServiceCharge || 0.0;
-                }
-              } catch (itemErr) {
-                console.error(`Failed to fetch additional charges for item ${baseId}:`, itemErr);
-              }
-            }
+             for (const baseId of itemBaseIds) {
+                 try {
+                    const itemDocRef = doc(db, 'store_items', baseId);
+                    const itemDocSnap = await getDoc(itemDocRef);
+                    if (itemDocSnap.exists()) {
+                        const itemData = itemDocSnap.data();
+                        const addDel = itemData.additionalDeliveryCharge || 0.0;
+                        const addSer = itemData.additionalServiceCharge || 0.0;
+                        additionalDelivery += addDel;
+                        additionalService += addSer;
+                        console.log(`Item '${baseId}': Add Delivery=${addDel}, Add Service=${addSer}`); // Log: Individual Item Charges
+                    } else {
+                         console.log(`Item '${baseId}' document not found for additional charges.`); // Log: Item Doc Not Found
+                    }
+                 } catch (itemErr) {
+                     console.error(`Failed to fetch additional charges for item ${baseId}:`, itemErr);
+                 }
+             }
+             console.log(`Total additional charges: Delivery=${additionalDelivery}, Service=${additionalService}`); // Log: Total Additional Charges
           }
         }
 
-        setDeliveryCharge(baseDelivery + additionalDelivery);
-        setServiceCharge(baseService + additionalService);
+        // Final calculation
+        const finalDelivery = baseDelivery + additionalDelivery;
+        const finalService = baseService + additionalService;
+
+        console.log(`Setting final charges: Delivery=${finalDelivery}, Service=${finalService}`); // Log: Final Setting Values
+        setDeliveryCharge(finalDelivery);
+        setServiceCharge(finalService);
 
       } catch (err) {
         console.error("Error calculating charges:", err);
         setError("Could not calculate delivery charges. Using defaults.");
-        setDeliveryCharge(baseDelivery + additionalDelivery);
-        setServiceCharge(baseService + additionalService);
+        // Set default charges on error, including any additional charges found before error
+        const finalDeliveryOnError = baseDelivery + additionalDelivery;
+        const finalServiceOnError = baseService + additionalService;
+        console.log(`Setting charges on ERROR: Delivery=${finalDeliveryOnError}, Service=${finalServiceOnError}`); // Log: Error Setting Values
+        setDeliveryCharge(finalDeliveryOnError);
+        setServiceCharge(finalServiceOnError);
       } finally {
         setIsLoadingCharges(false);
+        console.log("--- Charge Calculation ENDED ---"); // Log: End
       }
     };
 
     calculateCharges();
-  }, [userProfile, restaurantId, itemsForRestaurant, isPreOrder]);
+  // Ensure all dependencies used inside the effect are listed
+  }, [userProfile, restaurantId, itemsForRestaurant, isPreOrder, router.isReady, user]); // Added router.isReady and user
 
   const handleConfirmOrder = async () => {
     if (!user || !userProfile || deliveryCharge === null || serviceCharge === null || isPlacingOrder) return;
