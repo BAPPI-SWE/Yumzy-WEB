@@ -18,7 +18,7 @@ const NavItem = ({ item, isSelected, totalItems }) => {
   const isCart = item.path === '/cart';
 
   return (
-    <Link href={item.path} passHref>
+    <Link href={item.path} passHref style={{ textDecoration: 'none' }}>
       <div
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -30,7 +30,8 @@ const NavItem = ({ item, isSelected, totalItems }) => {
           justifyContent: 'center',
           cursor: 'pointer',
           width: '60px',
-          padding: '8px'
+          padding: '8px',
+          textDecoration: 'none'
         }}
       >
         {/* Icon container */}
