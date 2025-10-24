@@ -252,7 +252,7 @@ const BlinkingText = ({ text }) => {
 const AvailabilityChip = ({ isAvailable }) => {
   const bgColor = isAvailable ? '#D1FAE5' : '#FEE2E2';
   const textColor = isAvailable ? '#065F46' : '#991B1B';
-  const text = isAvailable ? 'Instant Delivery Available' : 'Instant Delivery Unavailable';
+  const text = isAvailable ? 'Available' : 'Instant Delivery Unavailable';
 
   return (
     <div style={{
