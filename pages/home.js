@@ -266,11 +266,11 @@ function HomePageContent() {
 
         {!error && userProfile?.subLocation && (
           <div style={{
-            paddingTop: '16px',
+            paddingTop: '8px',
             paddingBottom: '16px'
           }}>
             {offers.length > 0 && <OfferSlider offers={offers} />}
-            <div style={{ marginTop: '24px' }}>
+            <div style={{ marginTop: '12px' }}>
               <CategorySection onCategoryClick={handleCategoryClick} />
             </div>
 
