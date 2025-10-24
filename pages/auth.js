@@ -93,7 +93,7 @@ export default function AuthScreen() {
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          <span style={{ fontSize: '96px' }}>🛍️</span>
+          <span style={{ fontSize: '96px' }}>🍜</span>
         </div>
       </div>
 
@@ -160,42 +160,46 @@ export default function AuthScreen() {
               </span>
             </button>
 
+         
             {/* Sign In with Email */}
-            <Link href="/email-sign-in" passHref>
-              <div
-                onMouseEnter={() => setIsEmailHovered(true)}
-                onMouseLeave={() => setIsEmailHovered(false)}
-                style={{
-                  width: '100%',
-                  height: '50px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '16px',
-                  backgroundColor: '#D50032',
-                  color: 'white',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  opacity: isEmailHovered ? 0.9 : 1,
-                  transition: 'opacity 0.2s',
-                  textDecoration: 'none'
-                }}
-              >
-                <svg
-                  style={{ width: '24px', height: '24px' }}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            <Link href="/email-sign-in" passHref legacyBehavior> {/* <-- Add legacyBehavior */}
+              {/* Wrap with an explicit <a> tag and style it */}
+              <a style={{ textDecoration: 'none' }}>
+                <div
+                  onMouseEnter={() => setIsEmailHovered(true)}
+                  onMouseLeave={() => setIsEmailHovered(false)}
+                  style={{ // Keep existing styles on the div for layout/background
+                    width: '100%',
+                    height: '50px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '16px',
+                    backgroundColor: '#D50032',
+                    color: 'white',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    opacity: isEmailHovered ? 0.9 : 1,
+                    transition: 'opacity 0.2s',
+                    // textDecoration: 'none' // Can optionally remove from here now
+                  }}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
-                <span style={{ fontSize: '16px', fontWeight: 500 }}>Sign In with Email</span>
-              </div>
+                  <svg
+                    style={{ width: '24px', height: '24px' }}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span style={{ fontSize: '16px', fontWeight: 500 }}>Sign In with Email</span>
+                </div>
+              </a>
             </Link>
 
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -204,29 +208,32 @@ export default function AuthScreen() {
               <div style={{ flex: 1, borderTop: '1px solid #D1D5DB' }}></div>
             </div>
 
-            {/* Sign Up with Email */}
-            <Link href="/email-sign-up" passHref>
-              <div
-                onMouseEnter={() => setIsSignUpHovered(true)}
-                onMouseLeave={() => setIsSignUpHovered(false)}
-                style={{
-                  width: '100%',
-                  height: '50px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '16px',
-                  border: '1px solid #9CA3AF',
-                  color: '#374151',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  backgroundColor: isSignUpHovered ? '#F9FAFB' : 'white',
-                  transition: 'background-color 0.2s',
-                  textDecoration: 'none'
-                }}
-              >
-                <span style={{ fontSize: '16px', fontWeight: 500 }}>Sign Up with Email</span>
-              </div>
+           {/* Sign Up with Email */}
+            <Link href="/email-sign-up" passHref legacyBehavior> {/* <-- Add legacyBehavior */}
+              {/* Wrap with an explicit <a> tag and style it */}
+              <a style={{ textDecoration: 'none' }}>
+                <div
+                  onMouseEnter={() => setIsSignUpHovered(true)}
+                  onMouseLeave={() => setIsSignUpHovered(false)}
+                  style={{ // Keep existing styles on the div
+                    width: '100%',
+                    height: '50px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '16px',
+                    border: '1px solid #9CA3AF',
+                    color: '#374151',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    backgroundColor: isSignUpHovered ? '#F9FAFB' : 'white',
+                    transition: 'background-color 0.2s',
+                    // textDecoration: 'none' // Can optionally remove from here
+                  }}
+                >
+                  <span style={{ fontSize: '16px', fontWeight: 500 }}>Sign Up with Email</span>
+                </div>
+              </a>
             </Link>
           </div>
         </div>
