@@ -227,7 +227,10 @@ function HomePageContent() {
       display: 'flex',
       flexDirection: 'column',
       position: 'relative',
-      minHeight: '100vh'
+      minHeight: '100vh',
+      width: '100%',
+      margin: 0,
+      padding: 0
     }}>
       <HomeTopBar
         userProfile={userProfile}
@@ -243,7 +246,10 @@ function HomePageContent() {
         overflowY: 'auto',
         filter: searchResults !== null ? 'blur(4px)' : 'none',
         pointerEvents: searchResults !== null ? 'none' : 'auto',
-        transition: 'filter 0.2s'
+        transition: 'filter 0.2s',
+        width: '100%',
+        margin: 0,
+        padding: 0
       }}>
         {error && (
           <div style={{
