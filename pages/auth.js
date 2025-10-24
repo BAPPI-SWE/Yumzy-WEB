@@ -162,13 +162,14 @@ export default function AuthScreen() {
 
          
             {/* Sign In with Email */}
-            <Link href="/email-sign-in" passHref legacyBehavior> {/* <-- Add legacyBehavior */}
-              {/* Wrap with an explicit <a> tag and style it */}
+            <Link href="/email-sign-in" passHref legacyBehavior>
+              {/* The <a> tag is the SINGLE direct child of <Link> */}
               <a style={{ textDecoration: 'none' }}>
+                {/* The styled div is INSIDE the <a> tag */}
                 <div
                   onMouseEnter={() => setIsEmailHovered(true)}
                   onMouseLeave={() => setIsEmailHovered(false)}
-                  style={{ // Keep existing styles on the div for layout/background
+                  style={{
                     width: '100%',
                     height: '50px',
                     display: 'flex',
@@ -181,21 +182,10 @@ export default function AuthScreen() {
                     cursor: 'pointer',
                     opacity: isEmailHovered ? 0.9 : 1,
                     transition: 'opacity 0.2s',
-                    // textDecoration: 'none' // Can optionally remove from here now
                   }}
                 >
-                  <svg
-                    style={{ width: '24px', height: '24px' }}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
+                  <svg style={{ width: '24px', height: '24px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                   <span style={{ fontSize: '16px', fontWeight: 500 }}>Sign In with Email</span>
                 </div>
@@ -208,14 +198,15 @@ export default function AuthScreen() {
               <div style={{ flex: 1, borderTop: '1px solid #D1D5DB' }}></div>
             </div>
 
-           {/* Sign Up with Email */}
-            <Link href="/email-sign-up" passHref legacyBehavior> {/* <-- Add legacyBehavior */}
-              {/* Wrap with an explicit <a> tag and style it */}
+    {/* Sign Up with Email */}
+            <Link href="/email-sign-up" passHref legacyBehavior>
+              {/* The <a> tag is the SINGLE direct child of <Link> */}
               <a style={{ textDecoration: 'none' }}>
+                {/* The styled div is INSIDE the <a> tag */}
                 <div
                   onMouseEnter={() => setIsSignUpHovered(true)}
                   onMouseLeave={() => setIsSignUpHovered(false)}
-                  style={{ // Keep existing styles on the div
+                  style={{
                     width: '100%',
                     height: '50px',
                     display: 'flex',
@@ -228,7 +219,6 @@ export default function AuthScreen() {
                     cursor: 'pointer',
                     backgroundColor: isSignUpHovered ? '#F9FAFB' : 'white',
                     transition: 'background-color 0.2s',
-                    // textDecoration: 'none' // Can optionally remove from here
                   }}
                 >
                   <span style={{ fontSize: '16px', fontWeight: 500 }}>Sign Up with Email</span>
