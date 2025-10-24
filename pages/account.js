@@ -169,7 +169,6 @@ const AppInfoModal = ({ onClose }) => {
               gap: '6px'
             }}>
               <p><span style={{ fontWeight: 600 }}>Name:</span> BAPPI</p>
-              <p><span style={{ fontWeight: 600 }}>Phone:</span> +880 1590093644</p>
               <p><span style={{ fontWeight: 600 }}>Email:</span> bappi616@gmail.com</p>
               <p><span style={{ fontWeight: 600 }}>LinkedIn:</span> bappi-swe</p>
             </div>
