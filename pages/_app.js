@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import '../styles/globals.css';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-
+import Head from 'next/head';
 const mainLayoutRoutes = ['/home', '/cart', '/orders', '/account'];
 
 function MyApp({ Component, pageProps }) {
@@ -47,6 +47,14 @@ function MyApp({ Component, pageProps }) {
       minHeight: '100vh'
     }}>
       <AuthProvider>
+
+        <Head>
+        <meta name="google-site-verification" content="o_ZP7Gh228bnvaAsyMyjC4LDXViRYDT5ic31HO4qgOM" />
+        {/* You can also add your site title here */}
+        <title><title>Yumzy - Daffodil Smart City’s Food & Grocery Solution</title>
+</title>
+        <meta name="description" content="Yumzy lets Daffodil Smart City residents order food and groceries quickly and conveniently."" />
+      </Head>
         <CartProvider>
           {useMainLayout ? (
             <Layout>
