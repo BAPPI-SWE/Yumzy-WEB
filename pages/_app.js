@@ -53,7 +53,7 @@ function MyApp({ Component, pageProps }) {
         {/* You can also add your site title here */}
         <title><title>Yumzy - Daffodil Smart City’s Food & Grocery Solution</title>
 </title>
-        <meta name="description" content="Yumzy lets Daffodil Smart City residents order food and groceries quickly and conveniently."" />
+        <meta name="description" content="Yumzy lets Daffodil Smart City residents order food and groceries quickly and conveniently." />
       </Head>
         <CartProvider>
           {useMainLayout ? (
