@@ -47,12 +47,11 @@ function MyApp({ Component, pageProps }) {
       minHeight: '100vh'
     }}>
       <AuthProvider>
-
+                     
         <Head>
         <meta name="google-site-verification" content="o_ZP7Gh228bnvaAsyMyjC4LDXViRYDT5ic31HO4qgOM" />
         {/* You can also add your site title here */}
-        <title><title>Yumzy - Daffodil Smart City’s Food & Grocery Solution</title>
-</title>
+        <title>Yumzy - Daffodil Smart City’s Food & Grocery Solution</title>
         <meta name="description" content="Yumzy lets Daffodil Smart City residents order food and groceries quickly and conveniently." />
       </Head>
         <CartProvider>
