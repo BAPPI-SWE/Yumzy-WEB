@@ -149,6 +149,20 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
         }}>
           {item.name}
         </p>
+        
+        {/* --- MODIFICATION START: Show Mini Res Name on Card --- */}
+        {item.miniResName && item.miniResName !== 'Yumzy Store' && (
+          <span style={{
+            fontSize: '11px',
+            color: '#D50032',
+            fontWeight: 500,
+            marginTop: '4px'
+          }}>
+            {item.miniResName}
+          </span>
+        )}
+        {/* --- MODIFICATION END --- */}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '8px' }}>
           <span style={{ fontSize: '16px', fontWeight: 700, color: '#DC0C25' }}>{displayPrice}</span>
           {isMultiVariant ? (
@@ -342,7 +356,9 @@ const CartBottomBar = ({ onAddToCart, onPlaceOrder, totalItems }) => {
 export default function ItemGridPage() {
   const router = useRouter();
   const { slug, title: encodedTitle } = router.query;
-  const pageTitle = encodedTitle ? decodeURIComponent(encodedTitle) : 'Items';
+  // Fallback title if slug exists but title doesn't
+  const decodedSlugTitle = slug?.[1] ? decodeURIComponent(slug[1]) : 'Items';
+  const pageTitle = encodedTitle ? decodeURIComponent(encodedTitle) : decodedSlugTitle;
 
   const [allItems, setAllItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -358,8 +374,7 @@ export default function ItemGridPage() {
   useEffect(() => {
     if (!filterType || !filterValue) {
       if (router.isReady) {
-        setError('Could not determine items to load.');
-        setIsLoading(false);
+        // Don't set error if router is not ready, just wait
       }
       return;
     }
@@ -372,24 +387,41 @@ export default function ItemGridPage() {
       try {
         let itemsQuery;
         let shopStatusMap = {};
+        
+        // --- MODIFICATION: Create a map to hold shop names ---
+        let shopNameMap = {}; 
 
         if (filterType === 'subCategory') {
           itemsQuery = query(collection(db, 'store_items'), where('subCategory', '==', filterValue));
           const itemsSnap = await getDocs(itemsQuery);
+          // Get all unique miniRes IDs from the items
           const miniResIds = [...new Set(itemsSnap.docs.map((d) => d.data().miniRes).filter(Boolean))];
 
           if (miniResIds.length > 0) {
+            // Fetch all mini-restaurants in one go
             const shopStatusQuery = query(collection(db, 'mini_restaurants'), where('__name__', 'in', miniResIds));
             const shopStatusSnap = await getDocs(shopStatusQuery);
             shopStatusSnap.docs.forEach((doc) => {
               shopStatusMap[doc.id] = doc.data().open === 'yes';
+              // --- MODIFICATION: Store the name in the map ---
+              shopNameMap[doc.id] = doc.data().name || 'Yumzy Store'; 
             });
           }
         } else if (filterType === 'miniRes') {
           itemsQuery = query(collection(db, 'store_items'), where('miniRes', '==', filterValue));
+          // Fetch the specific mini-restaurant
           const shopDocRef = doc(db, 'mini_restaurants', filterValue);
           const shopDocSnap = await getDoc(shopDocRef);
-          shopStatusMap[filterValue] = shopDocSnap.exists() && shopDocSnap.data().open === 'yes';
+          
+          if (shopDocSnap.exists()) {
+            shopStatusMap[filterValue] = shopDocSnap.data().open === 'yes';
+            // --- MODIFICATION: Store the name in the map ---
+            shopNameMap[filterValue] = shopDocSnap.data().name || 'Yumzy Store';
+          } else {
+            // If shop doesn't exist, mark as closed
+            shopStatusMap[filterValue] = false;
+            shopNameMap[filterValue] = 'Yumzy Store'; // Default name
+          }
         } else {
           throw new Error('Invalid filter type');
         }
@@ -398,9 +430,15 @@ export default function ItemGridPage() {
         const fetchedItems = finalItemsSnap.docs.map((doc) => {
           const data = doc.data();
           const miniResId = data.miniRes;
-          const isShopOpen = !miniResId || shopStatusMap[miniResId] !== false;
+          
+          // Determine shop status
+          const isShopOpen = !miniResId || shopStatusMap[miniResId] !== false; // Default to open if no resId
           const isInStock = data.stock === 'yes';
           const isItemEnabled = isShopOpen && isInStock;
+
+          // --- MODIFICATION: Get the name from our map ---
+          // Fallback to data.miniResName (from item doc) only if not in map, then to empty string
+          const miniResName = miniResId ? (shopNameMap[miniResId] || data.miniResName || '') : (data.miniResName || '');
 
           const multiVariant = parseInt(data.multiVariant || 0);
           let variants = [];
@@ -424,10 +462,18 @@ export default function ItemGridPage() {
             isEnabled: isItemEnabled,
             variants,
             miniResId: miniResId || '',
-            miniResName: data.miniResName || '',
+            miniResName: miniResName, // --- Use the corrected name ---
           };
         });
-        setAllItems(fetchedItems);
+        
+        // --- MODIFICATION: Default sorting by priority if it exists ---
+        const sortedByPriority = fetchedItems.sort((a, b) => {
+          const priorityA = a.priority ?? 999; // Default to high number if no priority
+          const priorityB = b.priority ?? 999;
+          return priorityA - priorityB;
+        });
+        
+        setAllItems(sortedByPriority);
       } catch (err) {
         console.error('Error fetching items:', err);
         setError('Failed to load items. Please try again.');
@@ -440,13 +486,28 @@ export default function ItemGridPage() {
   }, [filterType, filterValue, router.isReady]);
 
   const sortedItems = useMemo(() => {
+    // We start with allItems, which is already sorted by priority
     const itemsToSort = [...allItems];
+    
     switch (sortOrder) {
       case SortOrder.PRICE_LOW_TO_HIGH:
-        return itemsToSort.sort((a, b) => getSortPrice(a) - getSortPrice(b));
+        // Sort by price, then by original priority
+        return itemsToSort.sort((a, b) => {
+          const priceA = getSortPrice(a);
+          const priceB = getSortPrice(b);
+          if (priceA !== priceB) return priceA - priceB;
+          return (a.priority ?? 999) - (b.priority ?? 999);
+        });
       case SortOrder.PRICE_HIGH_TO_LOW:
-        return itemsToSort.sort((a, b) => getSortPrice(b) - getSortPrice(a));
+         // Sort by price, then by original priority
+        return itemsToSort.sort((a, b) => {
+          const priceA = getSortPrice(a);
+          const priceB = getSortPrice(b);
+          if (priceA !== priceB) return priceB - priceA;
+          return (a.priority ?? 999) - (b.priority ?? 999);
+        });
       default:
+        // Default is already sorted by priority
         return itemsToSort;
     }
   }, [allItems, sortOrder]);
@@ -463,11 +524,11 @@ export default function ItemGridPage() {
   };
 
   const handlePlaceOrder = () => router.push(`/checkout/yumzy_store`);
-  const handleAddToCart = () => alert('Items saved to cart!');
+  const handleAddToCart = () => alert('Items saved to cart! (This is a placeholder)'); // Placeholder
   const handleItemClick = (item) =>
     item.isEnabled
       ? setSelectedItem(item)
-      : alert(item.stock !== 'yes' ? 'Out of Stock' : 'Shop Closed');
+      : alert(item.stock !== 'yes' ? 'Out of Stock' : 'Shop Closed'); // Simple feedback
   const handleCloseModal = () => setSelectedItem(null);
 
   return (
@@ -539,7 +600,7 @@ export default function ItemGridPage() {
 
         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '96px' }}>
           {isLoading && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', paddingTop: '40px' }}>
               <LoadingSpinner />
             </div>
           )}
@@ -579,7 +640,8 @@ export default function ItemGridPage() {
                 const cartMenuItem = { id: item.id, name: item.name, price: item.price };
                 const restaurantDetails = {
                   restaurantId: 'yumzy_store',
-                  restaurantName: item.miniResName || 'Yumzy Store',
+                  // --- MODIFICATION: Ensure correct name is passed ---
+                  restaurantName: item.miniResName || 'Yumzy Store', 
                 };
 
                 return (

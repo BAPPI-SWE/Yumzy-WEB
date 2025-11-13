@@ -146,7 +146,10 @@ function CheckoutPageContent() {
   }, [itemsForRestaurant]);
 
   const isPreOrder = itemsForRestaurant.length > 0 && itemsForRestaurant[0].menuItem.category?.startsWith("Pre-order");
-  const restaurantName = itemsForRestaurant.length > 0 ? itemsForRestaurant[0].restaurantName : 'Your Order';
+  
+  const restaurantName = itemsForRestaurant.length > 0 
+    ? (restaurantId === 'yumzy_store' ? 'Yumzy Store' : itemsForRestaurant[0].restaurantName)
+    : 'Your Order';
 
   useEffect(() => {
     if (router.isReady && (!restaurantId || itemsForRestaurant.length === 0)) {
@@ -176,24 +179,23 @@ function CheckoutPageContent() {
 
   // --- Fetch/Calculate Charges (Replicating CheckoutScreen.kt logic) ---
   useEffect(() => {
-    // Make sure userProfile is loaded and restaurantId is available
-    if (!userProfile || !restaurantId || !userProfile.baseLocation || !userProfile.subLocation) {
-        // If profile details needed for calculation are missing, maybe set default charges or wait
-        // Setting defaults here if profile location isn't set yet might be why it seems static
-        if (router.isReady && userProfile) { // Check if router is ready and profile attempted load
-             setError("Location details missing in profile. Using default charges.");
-             setDeliveryCharge(20.0);
-             setServiceCharge(5.0);
-             setIsLoadingCharges(false);
+    if (!userProfile || !restaurantId) {
+        if (router.isReady && userProfile === null) {
+           // Still loading profile
+        } else if (router.isReady && userProfile && (!userProfile.baseLocation || !userProfile.subLocation)) {
+           // Profile loaded but missing location
+           setError("Location details missing in profile. Using default charges.");
+           setDeliveryCharge(20.0);
+           setServiceCharge(5.0);
+           setIsLoadingCharges(false);
         }
-        return; // Wait for complete userProfile
+        return; 
     }
 
     const calculateCharges = async () => {
-      console.log("--- Starting Charge Calculation ---"); // Log: Start
+      console.log("--- Starting Charge Calculation ---"); 
       setIsLoadingCharges(true);
       setError('');
-      // Default values
       let baseDelivery = 20.0;
       let baseService = 5.0;
       let additionalDelivery = 0.0;
@@ -202,41 +204,39 @@ function CheckoutPageContent() {
       const baseLocation = userProfile.baseLocation;
       const subLocation = userProfile.subLocation;
 
-      console.log(`User Location: Base='${baseLocation}', Sub='${subLocation}'`); // Log: User Location
+      console.log(`User Location: Base='${baseLocation}', Sub='${subLocation}'`); 
 
-      // Skip calculation if essential location info is missing (already checked above, but double-check)
       if (!baseLocation || !subLocation) {
           setError("Please complete your location details in your profile.");
           setIsLoadingCharges(false);
-          setDeliveryCharge(baseDelivery); // Set defaults
+          setDeliveryCharge(baseDelivery); 
           setServiceCharge(baseService);
-          console.log("--- Charge Calculation ENDED (Missing Location) ---"); // Log: End (Error)
+          console.log("--- Charge Calculation ENDED (Missing Location) ---"); 
           return;
       }
 
       try {
-        // 1. Get base charges from location
-        console.log(`Querying 'locations' where name == '${baseLocation}'`); // Log: Query Start
+        console.log(`Querying 'locations' where name == '${baseLocation}'`); 
         const locQuery = query(collection(db, 'locations'), where('name', '==', baseLocation));
         const locSnap = await getDocs(locQuery);
 
         if (!locSnap.empty) {
           const locData = locSnap.docs[0].data();
-          console.log("Location Data Found:", locData); // Log: Location Data
+          console.log("Location Data Found:", locData); 
 
           const subLocations = locData.subLocations || [];
           const subIndex = subLocations.indexOf(subLocation);
-          console.log(`SubLocations Array: [${subLocations.join(', ')}], Found '${subLocation}' at index: ${subIndex}`); // Log: SubLocation Index
+          console.log(`SubLocations Array: [${subLocations.join(', ')}], Found '${subLocation}' at index: ${subIndex}`); 
 
           if (subIndex !== -1) {
               const deliveryKey = isPreOrder ? 'deliveryCharge' : 'deliveryChargeYumzy';
               const serviceKey = isPreOrder ? 'serviceCharge' : 'serviceChargeYumzy';
-              console.log(`Is PreOrder: ${isPreOrder}, Using keys: delivery='${deliveryKey}', service='${serviceKey}'`); // Log: Keys Used
+              console.log(`Is PreOrder: ${isPreOrder}, Using keys: delivery='${deliveryKey}', service='${serviceKey}'`); 
 
               const deliveryArray = locData[deliveryKey] || [];
               const serviceArray = locData[serviceKey] || [];
-              console.log(`Delivery Charges Array:`, deliveryArray); // Log: Delivery Array
-              console.log(`Service Charges Array:`, serviceArray); // Log: Service Array
+              console.log(`Delivery Charges Array:`, deliveryArray); 
+              console.log(`Service Charges Array:`, serviceArray); 
 
 
               if (subIndex < deliveryArray.length) {
@@ -260,23 +260,21 @@ function CheckoutPageContent() {
               } else {
                    console.warn(`SubLocation index ${subIndex} is out of bounds for service charges array (length ${serviceArray.length})`);
               }
-              console.log(`Base charges calculated: Delivery=${baseDelivery}, Service=${baseService}`); // Log: Base Charges Result
+              console.log(`Base charges calculated: Delivery=${baseDelivery}, Service=${baseService}`); 
           } else {
-               console.warn(`User's subLocation '${subLocation}' not found in location document's subLocations array.`); // Log: SubLocation Not Found
+               console.warn(`User's subLocation '${subLocation}' not found in location document's subLocations array.`); 
           }
         } else {
-             console.warn(`Location document not found for baseLocation: '${baseLocation}'`); // Log: Base Location Not Found
-             // Keep default base charges if location doc is missing
+             console.warn(`Location document not found for baseLocation: '${baseLocation}'`); 
         }
 
-        // 2. Get additional charges if it's the yumzy_store
         if (restaurantId === 'yumzy_store') {
-          console.log("Checking additional charges for yumzy_store items."); // Log: Yumzy Store Check
+          console.log("Checking additional charges for yumzy_store items."); 
           const itemBaseIds = [...new Set(itemsForRestaurant.map(item => {
             const id = item.menuItem.id;
-            return id.includes('_') ? id.split('_')[0] : id; // Get base ID before variant
+            return id.includes('_') ? id.split('_')[0] : id; 
           }))];
-          console.log("Base Item IDs for additional charges:", itemBaseIds); // Log: Item Base IDs
+          console.log("Base Item IDs for additional charges:", itemBaseIds); 
 
           if (itemBaseIds.length > 0) {
              for (const baseId of itemBaseIds) {
@@ -289,44 +287,41 @@ function CheckoutPageContent() {
                         const addSer = itemData.additionalServiceCharge || 0.0;
                         additionalDelivery += addDel;
                         additionalService += addSer;
-                        console.log(`Item '${baseId}': Add Delivery=${addDel}, Add Service=${addSer}`); // Log: Individual Item Charges
+                        console.log(`Item '${baseId}': Add Delivery=${addDel}, Add Service=${addSer}`); 
                     } else {
-                         console.log(`Item '${baseId}' document not found for additional charges.`); // Log: Item Doc Not Found
+                         console.log(`Item '${baseId}' document not found for additional charges.`); 
                     }
                  } catch (itemErr) {
                      console.error(`Failed to fetch additional charges for item ${baseId}:`, itemErr);
                  }
              }
-             console.log(`Total additional charges: Delivery=${additionalDelivery}, Service=${additionalService}`); // Log: Total Additional Charges
+             console.log(`Total additional charges: Delivery=${additionalDelivery}, Service=${additionalService}`); 
           }
         }
 
-        // Final calculation
         const finalDelivery = baseDelivery + additionalDelivery;
         const finalService = baseService + additionalService;
 
-        console.log(`Setting final charges: Delivery=${finalDelivery}, Service=${finalService}`); // Log: Final Setting Values
+        console.log(`Setting final charges: Delivery=${finalDelivery}, Service=${finalService}`); 
         setDeliveryCharge(finalDelivery);
         setServiceCharge(finalService);
 
       } catch (err) {
         console.error("Error calculating charges:", err);
         setError("Could not calculate delivery charges. Using defaults.");
-        // Set default charges on error, including any additional charges found before error
         const finalDeliveryOnError = baseDelivery + additionalDelivery;
         const finalServiceOnError = baseService + additionalService;
-        console.log(`Setting charges on ERROR: Delivery=${finalDeliveryOnError}, Service=${finalServiceOnError}`); // Log: Error Setting Values
+        console.log(`Setting charges on ERROR: Delivery=${finalDeliveryOnError}, Service=${finalServiceOnError}`); 
         setDeliveryCharge(finalDeliveryOnError);
         setServiceCharge(finalServiceOnError);
       } finally {
         setIsLoadingCharges(false);
-        console.log("--- Charge Calculation ENDED ---"); // Log: End
+        console.log("--- Charge Calculation ENDED ---"); 
       }
     };
 
     calculateCharges();
-  // Ensure all dependencies used inside the effect are listed
-  }, [userProfile, restaurantId, itemsForRestaurant, isPreOrder, router.isReady, user]); // Added router.isReady and user
+  }, [userProfile, restaurantId, itemsForRestaurant, isPreOrder, router.isReady, user]); 
 
   const handleConfirmOrder = async () => {
     if (!user || !userProfile || deliveryCharge === null || serviceCharge === null || isPlacingOrder) return;
@@ -340,7 +335,7 @@ function CheckoutPageContent() {
       itemName: cartItem.menuItem.name,
       quantity: cartItem.quantity,
       price: cartItem.menuItem.price,
-      miniResName: cartItem.restaurantName || ''
+      miniResName: (cartItem.restaurantName && cartItem.restaurantName !== 'Yumzy Store') ? cartItem.restaurantName : ''
     }));
 
     const orderType = isPreOrder ? "PreOrder" : "Instant";
@@ -356,11 +351,11 @@ function CheckoutPageContent() {
       floor: userProfile.floor || '',
       room: userProfile.room || '',
       restaurantId: restaurantId,
-      restaurantName: restaurantName,
+      restaurantName: restaurantName, // This will be "Yumzy Store" for store items
       totalPrice: finalTotal,
       deliveryCharge: deliveryCharge,
       serviceCharge: serviceCharge,
-      items: orderItems,
+      items: orderItems, // The individual mini res names are in here
       orderStatus: "Pending",
       createdAt: Timestamp.now(),
       orderType: orderType,
@@ -495,27 +490,45 @@ function CheckoutPageContent() {
             <div style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '8px',
-              borderTop: '1px solid #F3F4F6'
+              gap: '12px', // Increased gap for better spacing
             }}>
-              {itemsForRestaurant.map(item => (
+              {itemsForRestaurant.map((item, index) => (
                 <div 
                   key={item.menuItem.id}
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingTop: '8px'
+                    alignItems: 'flex-start', // Align to top
+                    paddingTop: '8px',
+                    borderTop: index === 0 ? 'none' : '1px solid #F3F4F6' // No border for first item
                   }}
                 >
-                  <span style={{
-                    fontSize: '14px',
-                    color: '#374151'
-                  }}>{item.quantity} x {item.menuItem.name}</span>
+                  {/* --- MODIFICATION START --- */}
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginRight: '8px' }}>
+                    <span style={{
+                      fontSize: '14px',
+                      color: '#374151'
+                    }}>{item.quantity} x {item.menuItem.name}</span>
+                    
+                    {/* Show Mini Res Name if it's a store item and not "Yumzy Store" */}
+                    {item.restaurantId === 'yumzy_store' && item.restaurantName && item.restaurantName !== 'Yumzy Store' && (
+                      <span style={{
+                        fontSize: '11px',
+                        color: '#6B7280', // A more subtle color
+                        fontWeight: 500,
+                        marginTop: '2px'
+                      }}>
+                        from {item.restaurantName}
+                      </span>
+                    )}
+                  </div>
+                  {/* --- MODIFICATION END --- */}
+                  
                   <span style={{
                     fontSize: '14px',
                     fontWeight: 500,
-                    color: '#1F2937'
+                    color: '#1F2937',
+                    whiteSpace: 'nowrap' // Prevent price from wrapping
                   }}>৳{(item.menuItem.price * item.quantity).toFixed(0)}</span>
                 </div>
               ))}

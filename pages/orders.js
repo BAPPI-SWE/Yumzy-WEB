@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
-import { collection, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, Timestamp, onSnapshot } from 'firebase/firestore'; // Import onSnapshot
 import LoadingSpinner from '../components/LoadingSpinner';
 import { InformationCircleIcon, MapPinIcon, ShoppingBagIcon, ClockIcon, ArrowRightIcon, XMarkIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 
@@ -44,6 +44,8 @@ const getStatusColor = (status = '') => {
 const OrderCard = ({ order, onClick }) => {
   const statusColors = getStatusColor(order.orderStatus);
   const itemCountText = order.items.length === 1 ? '1 item' : `${order.items.length} items`;
+
+  const cardTitle = order.restaurantId === 'yumzy_store' ? 'Yumzy Store' : order.restaurantName;
 
   return (
     <div
@@ -89,7 +91,7 @@ const OrderCard = ({ order, onClick }) => {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
-            }}>{order.restaurantName}</span>
+            }}>{cardTitle}</span> {/* Use cardTitle here */}
           </div>
           <span style={{
             padding: '2px 10px',
@@ -174,6 +176,8 @@ const OrderDetailsModal = ({ order, onClose }) => {
   if (!order) return null;
   const itemsSubtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+  const cardTitle = order.restaurantId === 'yumzy_store' ? 'Yumzy Store' : order.restaurantName;
+
   return (
     <div style={{
       position: 'fixed',
@@ -234,7 +238,8 @@ const OrderDetailsModal = ({ order, onClose }) => {
           gap: '16px',
           overflowY: 'auto'
         }}>
-          <p style={{ fontWeight: 600, color: '#1F2937' }}>{order.restaurantName}</p>
+          {/* Use cardTitle here */}
+          <p style={{ fontWeight: 600, color: '#1F2937' }}>{cardTitle}</p>
           <p style={{ fontSize: '12px', color: '#6B7280' }}>Ordered on {formatTimestamp(order.createdAt)}</p>
           <p style={{
             fontSize: '14px',
@@ -263,14 +268,19 @@ const OrderDetailsModal = ({ order, onClose }) => {
               }}>
                 <div style={{ flex: 1, marginRight: '8px' }}>
                   <span style={{ color: '#374151' }}>{item.quantity} x {item.name}</span>
-                  {item.miniResName && (
+                  
+                  {/* --- MODIFICATION START --- */}
+                  {/* Only show if miniResName exists AND it's not the default fallback */}
+                  {item.miniResName && item.miniResName !== 'Yumzy Store' && (
                     <span style={{
                       display: 'block',
                       fontSize: '12px',
                       color: '#6B7280',
-                      marginLeft: '16px'
+                      marginLeft: '16px' // This indent helps
                     }}>from {item.miniResName}</span>
                   )}
+                  {/* --- MODIFICATION END --- */}
+                  
                 </div>
                 <span style={{
                   fontWeight: 500,
@@ -371,46 +381,51 @@ function OrdersPage() {
     }
   }, [showAd, router]);
 
-  // --- Fetch Orders ---
+  // --- Fetch Orders (with real-time updates) ---
   useEffect(() => {
     if (!user) return;
 
     setIsLoading(true);
     setError('');
+    
     const ordersQuery = query(
       collection(db, 'orders'),
       where('userId', '==', user.uid),
       orderBy('createdAt', 'desc')
     );
 
-    getDocs(ordersQuery)
-      .then(snapshot => {
-        const fetchedOrders = snapshot.docs.map(doc => {
-          const data = doc.data();
-          const items = (data.items || []).map(item => ({
-            name: item.itemName || item.name || 'Unknown Item',
-            quantity: Number(item.quantity) || 0,
-            price: Number(item.itemPrice || item.price) || 0.0,
-            miniResName: item.miniResName || '',
-          }));
-          return {
-            id: doc.id,
-            restaurantName: data.restaurantName || 'Unknown Restaurant',
-            totalPrice: Number(data.totalPrice) || 0.0,
-            orderStatus: data.orderStatus || 'Unknown',
-            createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now(),
-            items: items,
-            deliveryCharge: Number(data.deliveryCharge) || 0.0,
-            serviceCharge: Number(data.serviceCharge) || 0.0,
-          };
-        });
-        setOrders(fetchedOrders);
-      })
-      .catch(err => {
-        console.error("Error fetching orders:", err);
-        setError("Failed to load your orders.");
-      })
-      .finally(() => setIsLoading(false));
+    // Use onSnapshot for real-time updates
+    const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+      const fetchedOrders = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const items = (data.items || []).map(item => ({
+          name: item.itemName || item.name || 'Unknown Item',
+          quantity: Number(item.quantity) || 0,
+          price: Number(item.itemPrice || item.price) || 0.0,
+          miniResName: item.miniResName || '',
+        }));
+        return {
+          id: doc.id,
+          restaurantName: data.restaurantName || 'Unknown Restaurant',
+          restaurantId: data.restaurantId || '', // Store the ID
+          totalPrice: Number(data.totalPrice) || 0.0,
+          orderStatus: data.orderStatus || 'Unknown',
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now(),
+          items: items,
+          deliveryCharge: Number(data.deliveryCharge) || 0.0,
+          serviceCharge: Number(data.serviceCharge) || 0.0,
+        };
+      });
+      setOrders(fetchedOrders);
+      setIsLoading(false);
+    }, (err) => {
+      console.error("Error fetching orders:", err);
+      setError("Failed to load your orders.");
+      setIsLoading(false);
+    });
+
+    // Clean up the listener on unmount
+    return () => unsubscribe();
   }, [user]);
 
   return (
@@ -454,7 +469,7 @@ function OrdersPage() {
             justifyContent: 'center',
             paddingTop: '80px'
           }}>
-            <p>Loading orders...</p>
+            <LoadingSpinner />
           </div>
         )}
 

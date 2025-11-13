@@ -58,10 +58,23 @@ const QuantitySelector = ({ quantity, onIncrement, onDecrement }) => {
 
 // Cart Item Row
 const CartItemRow = ({ item, onIncrement, onDecrement }) => {
+  // --- Check if this is a store item ---
+  const isStoreItem = item.restaurantId === 'yumzy_store';
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', paddingBottom: '12px' }}>
       <div style={{ flex: 1, marginRight: '16px' }}>
         <p style={{ fontSize: '14px', fontWeight: 600, color: '#1F2937' }}>{item.menuItem.name}</p>
+        
+        {/* --- MODIFICATION START --- */}
+        {/* If it's a store item and has a meaningful mini res name, show it */}
+        {isStoreItem && item.restaurantName && item.restaurantName !== 'Yumzy Store' && (
+          <p style={{ fontSize: '11px', color: '#D50032', fontWeight: 500, marginTop: '2px' }}>
+            from {item.restaurantName}
+          </p>
+        )}
+        {/* --- MODIFICATION END --- */}
+
         <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>৳{item.menuItem.price.toFixed(0)}</p>
       </div>
       <QuantitySelector
@@ -77,13 +90,18 @@ const CartItemRow = ({ item, onIncrement, onDecrement }) => {
 const RestaurantCartCard = ({ restaurantName, restaurantId, items, onIncrement, onDecrement, onClearRestaurant, onPlaceOrder }) => {
   const subTotal = items.reduce((sum, item) => sum + item.menuItem.price * item.quantity, 0);
 
+  // --- MODIFICATION: If it's yumzy_store, use a generic title ---
+  const cardTitle = restaurantId === 'yumzy_store' ? 'Yumzy Store' : restaurantName;
+  // --- END MODIFICATION ---
+
   return (
     <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '16px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <BuildingStorefrontIcon style={{ width: '20px', height: '20px', color: '#D50032' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1F2937' }}>{restaurantName}</h3>
+          {/* Use the modified cardTitle here */}
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1F2937' }}>{cardTitle}</h3>
         </div>
         <button
           onClick={() => onClearRestaurant(restaurantId)}
@@ -98,7 +116,7 @@ const RestaurantCartCard = ({ restaurantName, restaurantId, items, onIncrement, 
           }}
           onMouseEnter={(e) => e.currentTarget.style.color = '#B91C1C'}
           onMouseLeave={(e) => e.currentTarget.style.color = '#EF4444'}
-          title={`Clear all items from ${restaurantName}`}
+          title={`Clear all items from ${cardTitle}`}
         >
           Clear
         </button>
