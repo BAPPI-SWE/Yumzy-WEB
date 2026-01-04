@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://yumzy-web.vercel.app
+
+# Sitemaps
+Sitemap: https://yumzy-web.vercel.app/sitemap.xml
