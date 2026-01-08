@@ -76,7 +76,7 @@ export default function AuthScreen() {
           fontSize: '30px',
           fontWeight: 700
         }}>
-          Welcome to Yumzy🍕
+          Welcome to Foodish🍕
         </h1>
         <p style={{
           marginTop: '12px',

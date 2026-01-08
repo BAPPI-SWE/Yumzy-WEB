@@ -110,7 +110,7 @@ const AppInfoModal = ({ onClose }) => {
             fontSize: '20px',
             fontWeight: 700,
             color: '#B70314'
-          }}>🍔 Yumzy</h2>
+          }}>🍔 Foodish🍕</h2>
           <p style={{
             fontSize: '12px',
             color: '#6B7280'
@@ -180,7 +180,7 @@ const AppInfoModal = ({ onClose }) => {
             color: '#4B5563',
             paddingTop: '8px'
           }}>
-            Thank you for using Yumzy! 🎉
+            Thank you for using Foodish! 🎉
           </p>
         </div>
 
