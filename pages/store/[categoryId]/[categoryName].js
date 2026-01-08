@@ -173,13 +173,10 @@ export default function SubCategoryListPage() {
     const fetchData = async () => {
       setIsLoading(true);
       setError('');
-      setSubCategories([]);
-      setMiniRestaurants([]);
-      setItemCounts({});
-      setAnnouncements([]);
-
+      
       let location = userSubLocation;
 
+      // 1. Fetch Location
       if (!location) {
         try {
           const userDocRef = doc(db, 'users', user.uid);
@@ -193,7 +190,6 @@ export default function SubCategoryListPage() {
             return;
           }
         } catch (err) {
-          console.error('Error fetching user location:', err);
           setError('Could not verify your location.');
           setIsLoading(false);
           return;
@@ -207,27 +203,38 @@ export default function SubCategoryListPage() {
       }
 
       try {
-        const announceQuery = query(
-          collection(db, 'announce'),
-          where('parentCategory', '==', categoryId),
-          where('availableLocations', 'array-contains', location)
-        );
-        const announceSnap = await getDocs(announceQuery);
+        // 2. Parallel Fetching
+        const [announceSnap, subCatSnap, miniResSnap] = await Promise.all([
+          getDocs(query(collection(db, 'announce'), where('parentCategory', '==', categoryId), where('availableLocations', 'array-contains', location))),
+          getDocs(query(collection(db, 'store_sub_categories'), where('parentCategory', '==', categoryId), where('availableLocations', 'array-contains', location))),
+          getDocs(query(collection(db, 'mini_restaurants'), where('parentCategory', '==', categoryId), where('availableLocations', 'array-contains', location)))
+        ]);
+
+        // 3. Announcements
         setAnnouncements(announceSnap.docs.map(d => ({ id: d.id, text: d.data().text || '' })));
 
-        const subCatQuery = query(
-          collection(db, 'store_sub_categories'),
-          where('parentCategory', '==', categoryId),
-          where('availableLocations', 'array-contains', location)
-        );
-        const subCatSnap = await getDocs(subCatQuery);
-        const fetchedSubCats = subCatSnap.docs.map(d => ({
-          id: d.id,
-          name: d.data().name || '',
-          imageUrl: d.data().imageUrl || ''
-        }));
+        // 4. Sub-Categories with Strict Priority Sorting
+        const fetchedSubCats = subCatSnap.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            name: data.name || '',
+            imageUrl: data.imageUrl || '',
+            // Ensure priority is treated as a number; fallback to a very high number
+            priority: data.priority !== undefined && data.priority !== null ? Number(data.priority) : 9999
+          };
+        }).sort((a, b) => {
+          // Primary sort by priority
+          if (a.priority !== b.priority) {
+            return a.priority - b.priority;
+          }
+          // Secondary sort by name (alphabetical)
+          return a.name.localeCompare(b.name);
+        });
+        
         setSubCategories(fetchedSubCats);
 
+        // 5. Item Counts
         if (fetchedSubCats.length > 0) {
           const subCatNames = fetchedSubCats.map(sc => sc.name);
           const itemsQuery = query(collection(db, 'store_items'), where('subCategory', 'in', subCatNames));
@@ -240,20 +247,25 @@ export default function SubCategoryListPage() {
           setItemCounts(counts);
         }
 
-        const miniResQuery = query(
-          collection(db, 'mini_restaurants'),
-          where('parentCategory', '==', categoryId),
-          where('availableLocations', 'array-contains', location)
-        );
-        const miniResSnap = await getDocs(miniResQuery);
-        setMiniRestaurants(
-          miniResSnap.docs.map(d => ({
+        // 6. Mini-Restaurants with Strict Priority Sorting
+        const sortedMiniRes = miniResSnap.docs.map(d => {
+          const data = d.data();
+          return {
             id: d.id,
-            name: d.data().name || '',
-            imageUrl: d.data().imageUrl || '',
-            open: d.data().open || 'no'
-          }))
-        );
+            name: data.name || '',
+            imageUrl: data.imageUrl || '',
+            open: data.open || 'no',
+            priority: data.priority !== undefined && data.priority !== null ? Number(data.priority) : 9999
+          };
+        }).sort((a, b) => {
+          if (a.priority !== b.priority) {
+            return a.priority - b.priority;
+          }
+          return a.name.localeCompare(b.name);
+        });
+
+        setMiniRestaurants(sortedMiniRes);
+
       } catch (err) {
         console.error('Error fetching store data:', err);
         setError('Failed to load store information.');
@@ -265,7 +277,7 @@ export default function SubCategoryListPage() {
     fetchData();
   }, [categoryId, user, userSubLocation]);
 
-  // --- Navigation Handlers ---
+  // --- Handlers ---
   const handleSubCategoryClick = (name) => {
     const encoded = encodeURIComponent(name);
     router.push(`/items/subCategory/${encoded}?title=${encoded}`);
@@ -279,7 +291,6 @@ export default function SubCategoryListPage() {
   return (
     <ProtectedRoute>
       <div style={{ minHeight: '100vh', backgroundColor: 'white', display: 'flex', flexDirection: 'column' }}>
-        {/* Top Bar */}
         <div
           style={{
             position: 'sticky',
@@ -320,14 +331,12 @@ export default function SubCategoryListPage() {
           </h1>
         </div>
 
-        {/* Loading */}
         {isLoading && (
           <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             <LoadingSpinner />
           </div>
         )}
 
-        {/* Error */}
         {!isLoading && error && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '24px', textAlign: 'center' }}>
             <NoSymbolIcon style={{ width: '48px', height: '48px', color: '#F87171', marginBottom: '12px' }} />
@@ -335,10 +344,8 @@ export default function SubCategoryListPage() {
           </div>
         )}
 
-        {/* Content */}
         {!isLoading && !error && (
           <>
-            {/* Tabs */}
             <div style={{ borderBottom: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex' }}>
                 <button
@@ -378,7 +385,6 @@ export default function SubCategoryListPage() {
               </div>
             </div>
 
-            {/* Tab Content */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#F9FAFB' }}>
               {announcements.map(a => (
                 <AnnouncementCard key={a.id} announcement={a} />
