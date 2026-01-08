@@ -45,7 +45,7 @@ const OrderCard = ({ order, onClick }) => {
   const statusColors = getStatusColor(order.orderStatus);
   const itemCountText = order.items.length === 1 ? '1 item' : `${order.items.length} items`;
 
-  const cardTitle = order.restaurantId === 'yumzy_store' ? 'Yumzy Store' : order.restaurantName;
+  const cardTitle = order.restaurantId === 'yumzy_store' ? 'Foodish Store' : order.restaurantName;
 
   return (
     <div
@@ -176,7 +176,7 @@ const OrderDetailsModal = ({ order, onClose }) => {
   if (!order) return null;
   const itemsSubtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const cardTitle = order.restaurantId === 'yumzy_store' ? 'Yumzy Store' : order.restaurantName;
+  const cardTitle = order.restaurantId === 'yumzy_store' ? 'Foodish Store' : order.restaurantName;
 
   return (
     <div style={{
