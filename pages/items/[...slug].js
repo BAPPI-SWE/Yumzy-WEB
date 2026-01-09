@@ -345,7 +345,7 @@ const CartBottomBar = ({ onAddToCart, onPlaceOrder, totalItems }) => {
           onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
         >
           <CheckCircleIcon style={{ width: '20px', height: '20px', marginRight: '8px' }} />
-          <span>Place Order Now ({totalItems})</span>
+          <span>Continue ({totalItems})</span>
         </button>
       </div>
     </div>
