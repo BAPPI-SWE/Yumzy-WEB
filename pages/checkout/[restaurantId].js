@@ -6,7 +6,53 @@ import { db } from '../../firebase/config';
 import { doc, getDoc, collection, query, where, addDoc, Timestamp, getDocs } from 'firebase/firestore';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { ArrowLeftIcon, MapPinIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';
+import { 
+  ArrowLeftIcon, 
+  MapPinIcon, 
+  CheckCircleIcon, 
+  ExclamationCircleIcon,
+  BanknotesIcon,
+  CreditCardIcon,
+  XMarkIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  CurrencyBangladeshiIcon
+} from '@heroicons/react/24/solid';
+
+// --- Payment Types and Constants ---
+const PaymentType = {
+  COD: 'COD',
+  BKASH: 'BKASH',
+  NAGAD: 'NAGAD',
+  ROCKET: 'ROCKET'
+};
+
+const paymentMethods = {
+  [PaymentType.COD]: {
+    name: 'Cash on Delivery',
+    description: 'Pay when you receive your order',
+    color: '#10B981',
+    icon: BanknotesIcon
+  },
+  [PaymentType.BKASH]: {
+    name: 'Bkash',
+    number: '01970102586',
+    color: '#E2136E',
+    icon: CurrencyBangladeshiIcon
+  },
+  [PaymentType.NAGAD]: {
+    name: 'Nagad',
+    number: '01988143409',
+    color: '#F15A29',
+    icon: CurrencyBangladeshiIcon
+  },
+  [PaymentType.ROCKET]: {
+    name: 'Rocket',
+    number: '017463246207',
+    color: '#00AEEF',
+    icon: CurrencyBangladeshiIcon
+  }
+};
 
 // --- Helper Components ---
 
@@ -120,6 +166,439 @@ const OrderSentOverlay = ({ onComplete }) => {
   );
 };
 
+// Payment Method Dialog Component
+const PaymentMethodDialog = ({ onClose, onPaymentSelected }) => {
+  const [showForm, setShowForm] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState(null);
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [transactionId, setTransactionId] = useState('');
+
+  useEffect(() => {
+    if (selectedMethod && !showForm) {
+      const timer = setTimeout(() => setShowForm(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedMethod]);
+
+  const handleMethodSelect = (method) => {
+    setSelectedMethod(method);
+  };
+
+  const handleSubmit = () => {
+    if (mobileNumber && transactionId) {
+      onPaymentSelected(selectedMethod, `${mobileNumber},${transactionId}`);
+    }
+  };
+
+  if (selectedMethod && showForm) {
+    const method = paymentMethods[selectedMethod];
+    return (
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: '16px'
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '20px',
+          width: '100%',
+          maxWidth: '400px',
+          overflow: 'hidden',
+          animation: 'slideUp 0.3s ease-out'
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: '20px',
+            backgroundColor: method.color,
+            color: 'white',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <method.icon style={{ width: '24px', height: '24px' }} />
+              <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{method.name} Payment</h3>
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              <XMarkIcon style={{ width: '24px', height: '24px' }} />
+            </button>
+          </div>
+
+          {/* Instructions */}
+          <div style={{ padding: '20px' }}>
+            <div style={{
+              backgroundColor: '#FEF3C7',
+              border: '1px solid #FBBF24',
+              borderRadius: '8px',
+              padding: '12px',
+              marginBottom: '20px'
+            }}>
+              <p style={{ fontSize: '14px', color: '#92400E', fontWeight: 600 }}>
+                Send money to {method.number}
+              </p>
+              <p style={{ fontSize: '12px', color: '#92400E', marginTop: '4px' }}>
+                Then enter your mobile number and transaction ID below.
+              </p>
+            </div>
+
+            {/* Mobile Number Input */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#374151',
+                marginBottom: '8px'
+              }}>
+                Mobile Number
+              </label>
+              <input
+                type="tel"
+                value={mobileNumber}
+                onChange={(e) => setMobileNumber(e.target.value)}
+                placeholder="01XXXXXXXXX"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={(e) => e.target.style.borderColor = method.color}
+                onBlur={(e) => e.target.style.borderColor = '#D1D5DB'}
+              />
+            </div>
+
+            {/* Transaction ID Input */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#374151',
+                marginBottom: '8px'
+              }}>
+                Transaction ID
+              </label>
+              <input
+                type="text"
+                value={transactionId}
+                onChange={(e) => setTransactionId(e.target.value)}
+                placeholder="Enter transaction ID"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={(e) => e.target.style.borderColor = method.color}
+                onBlur={(e) => e.target.style.borderColor = '#D1D5DB'}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={onClose}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#F3F4F6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E5E7EB'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!mobileNumber || !transactionId}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: mobileNumber && transactionId ? method.color : '#9CA3AF',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: mobileNumber && transactionId ? 'pointer' : 'not-allowed',
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  if (mobileNumber && transactionId) e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  if (mobileNumber && transactionId) e.currentTarget.style.opacity = '1';
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+        <style jsx>{`
+          @keyframes slideUp {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Payment Method Selection View
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '16px'
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '20px',
+        width: '100%',
+        maxWidth: '400px',
+        overflow: 'hidden',
+        animation: 'slideUp 0.3s ease-out'
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '20px',
+          backgroundColor: '#B70314',
+          color: 'white',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Select Payment Method</h3>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer'
+            }}
+          >
+            <XMarkIcon style={{ width: '24px', height: '24px' }} />
+          </button>
+        </div>
+
+        {/* Payment Options */}
+        <div style={{ padding: '20px' }}>
+          {/* Bkash */}
+          <button
+            onClick={() => handleMethodSelect(PaymentType.BKASH)}
+            style={{
+              width: '100%',
+              padding: '16px',
+              backgroundColor: '#F8F9FA',
+              border: '1px solid #E0E0E0',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              marginBottom: '12px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#F3F4F6';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 6px rgba(226, 19, 110, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#F8F9FA';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                backgroundColor: '#E2136E',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <CurrencyBangladeshiIcon style={{ width: '24px', height: '24px', color: 'white' }} />
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ fontSize: '16px', fontWeight: 600, color: '#1F2937' }}>Bkash</p>
+                <p style={{ fontSize: '12px', color: '#6B7280' }}>Send to: 01970102586</p>
+              </div>
+            </div>
+            <ArrowRightIcon style={{ width: '20px', height: '20px', color: '#9CA3AF' }} />
+          </button>
+
+          {/* Nagad */}
+          <button
+            onClick={() => handleMethodSelect(PaymentType.NAGAD)}
+            style={{
+              width: '100%',
+              padding: '16px',
+              backgroundColor: '#F8F9FA',
+              border: '1px solid #E0E0E0',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              marginBottom: '12px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#F3F4F6';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 6px rgba(241, 90, 41, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#F8F9FA';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                backgroundColor: '#F15A29',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <CurrencyBangladeshiIcon style={{ width: '24px', height: '24px', color: 'white' }} />
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ fontSize: '16px', fontWeight: 600, color: '#1F2937' }}>Nagad</p>
+                <p style={{ fontSize: '12px', color: '#6B7280' }}>Send to: 01988143409</p>
+              </div>
+            </div>
+            <ArrowRightIcon style={{ width: '20px', height: '20px', color: '#9CA3AF' }} />
+          </button>
+
+          {/* Rocket */}
+          <button
+            onClick={() => handleMethodSelect(PaymentType.ROCKET)}
+            style={{
+              width: '100%',
+              padding: '16px',
+              backgroundColor: '#F8F9FA',
+              border: '1px solid #E0E0E0',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              marginBottom: '20px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#F3F4F6';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 174, 239, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#F8F9FA';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                backgroundColor: '#00AEEF',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <CurrencyBangladeshiIcon style={{ width: '24px', height: '24px', color: 'white' }} />
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ fontSize: '16px', fontWeight: 600, color: '#1F2937' }}>Rocket</p>
+                <p style={{ fontSize: '12px', color: '#6B7280' }}>Send to: 017463246207</p>
+              </div>
+            </div>
+            <ArrowRightIcon style={{ width: '20px', height: '20px', color: '#9CA3AF' }} />
+          </button>
+
+          <button
+            onClick={onClose}
+            style={{
+              width: '100%',
+              padding: '12px',
+              backgroundColor: '#F3F4F6',
+              color: '#374151',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E5E7EB'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+      <style jsx>{`
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 // --- Main Checkout Page Component ---
 function CheckoutPageContent() {
   const router = useRouter();
@@ -135,6 +614,13 @@ function CheckoutPageContent() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [showOrderSent, setShowOrderSent] = useState(false);
   const [error, setError] = useState('');
+  
+  // Payment method states
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState({
+    type: PaymentType.COD,
+    details: ''
+  });
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   const itemsForRestaurant = useMemo(() => {
     if (!restaurantId) return [];
@@ -177,7 +663,7 @@ function CheckoutPageContent() {
       .finally(() => setIsLoadingProfile(false));
   }, [user]);
 
-  // --- Fetch/Calculate Charges (Replicating CheckoutScreen.kt logic) ---
+  // --- Fetch/Calculate Charges ---
   useEffect(() => {
     if (!userProfile || !restaurantId) {
         if (router.isReady && userProfile === null) {
@@ -237,7 +723,6 @@ function CheckoutPageContent() {
               const serviceArray = locData[serviceKey] || [];
               console.log(`Delivery Charges Array:`, deliveryArray); 
               console.log(`Service Charges Array:`, serviceArray); 
-
 
               if (subIndex < deliveryArray.length) {
                   const fetchedDelivery = Number(deliveryArray[subIndex]);
@@ -323,6 +808,38 @@ function CheckoutPageContent() {
     calculateCharges();
   }, [userProfile, restaurantId, itemsForRestaurant, isPreOrder, router.isReady, user]); 
 
+  const handlePaymentSelect = (paymentType, details = '') => {
+    setSelectedPaymentMethod({
+      type: paymentType,
+      details: details
+    });
+    setShowPaymentDialog(false);
+  };
+
+  const getPaymentString = () => {
+    switch (selectedPaymentMethod.type) {
+      case PaymentType.COD:
+        return 'COD';
+      case PaymentType.BKASH:
+        return `Bkash,01970102586,${selectedPaymentMethod.details}`;
+      case PaymentType.NAGAD:
+        return `Nagad,01988143409,${selectedPaymentMethod.details}`;
+      case PaymentType.ROCKET:
+        return `Rocket,017463246207,${selectedPaymentMethod.details}`;
+      default:
+        return 'COD';
+    }
+  };
+
+  const getPaymentDisplayText = () => {
+    const method = paymentMethods[selectedPaymentMethod.type];
+    if (selectedPaymentMethod.type === PaymentType.COD) {
+      return method.name;
+    }
+    const details = selectedPaymentMethod.details.split(',');
+    return `${method.name} (${details[0]})`;
+  };
+
   const handleConfirmOrder = async () => {
     if (!user || !userProfile || deliveryCharge === null || serviceCharge === null || isPlacingOrder) return;
 
@@ -330,6 +847,7 @@ function CheckoutPageContent() {
     setError('');
 
     const finalTotal = itemsSubtotal + deliveryCharge + serviceCharge;
+    const paymentString = getPaymentString();
 
     const orderItems = itemsForRestaurant.map(cartItem => ({
       itemName: cartItem.menuItem.name,
@@ -351,15 +869,16 @@ function CheckoutPageContent() {
       floor: userProfile.floor || '',
       room: userProfile.room || '',
       restaurantId: restaurantId,
-      restaurantName: restaurantName, // This will be "Yumzy Store" for store items
+      restaurantName: restaurantName,
       totalPrice: finalTotal,
       deliveryCharge: deliveryCharge,
       serviceCharge: serviceCharge,
-      items: orderItems, // The individual mini res names are in here
+      items: orderItems,
       orderStatus: "Pending",
       createdAt: Timestamp.now(),
       orderType: orderType,
-      preOrderCategory: orderType === "PreOrder" ? firstItemCategory : ""
+      preOrderCategory: orderType === "PreOrder" ? firstItemCategory : "",
+      payment: paymentString // Add payment field
     };
 
     try {
@@ -490,7 +1009,7 @@ function CheckoutPageContent() {
             <div style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px', // Increased gap for better spacing
+              gap: '12px',
             }}>
               {itemsForRestaurant.map((item, index) => (
                 <div 
@@ -498,23 +1017,21 @@ function CheckoutPageContent() {
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'flex-start', // Align to top
+                    alignItems: 'flex-start',
                     paddingTop: '8px',
-                    borderTop: index === 0 ? 'none' : '1px solid #F3F4F6' // No border for first item
+                    borderTop: index === 0 ? 'none' : '1px solid #F3F4F6'
                   }}
                 >
-                  {/* --- MODIFICATION START --- */}
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginRight: '8px' }}>
                     <span style={{
                       fontSize: '14px',
                       color: '#374151'
                     }}>{item.quantity} x {item.menuItem.name}</span>
                     
-                    {/* Show Mini Res Name if it's a store item and not "Yumzy Store" */}
                     {item.restaurantId === 'yumzy_store' && item.restaurantName && item.restaurantName !== 'Yumzy Store' && (
                       <span style={{
                         fontSize: '11px',
-                        color: '#6B7280', // A more subtle color
+                        color: '#6B7280',
                         fontWeight: 500,
                         marginTop: '2px'
                       }}>
@@ -522,16 +1039,137 @@ function CheckoutPageContent() {
                       </span>
                     )}
                   </div>
-                  {/* --- MODIFICATION END --- */}
                   
                   <span style={{
                     fontSize: '14px',
                     fontWeight: 500,
                     color: '#1F2937',
-                    whiteSpace: 'nowrap' // Prevent price from wrapping
+                    whiteSpace: 'nowrap'
                   }}>৳{(item.menuItem.price * item.quantity).toFixed(0)}</span>
                 </div>
               ))}
+            </div>
+          </ModernCard>
+        </section>
+
+        {/* Payment Method Section */}
+        <section>
+          <SectionHeader title="Payment Method" />
+          <ModernCard>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Cash on Delivery Option */}
+              <div
+                onClick={() => handlePaymentSelect(PaymentType.COD)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px',
+                  backgroundColor: selectedPaymentMethod.type === PaymentType.COD ? '#F0F9FF' : 'transparent',
+                  border: selectedPaymentMethod.type === PaymentType.COD ? '2px solid #0EA5E9' : '1px solid #E5E7EB',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedPaymentMethod.type !== PaymentType.COD) {
+                    e.currentTarget.style.backgroundColor = '#F9FAFB';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedPaymentMethod.type !== PaymentType.COD) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  border: selectedPaymentMethod.type === PaymentType.COD ? '6px solid #0EA5E9' : '2px solid #9CA3AF',
+                  marginRight: '12px',
+                  transition: 'all 0.2s'
+                }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BanknotesIcon style={{ width: '20px', height: '20px', color: '#10B981' }} />
+                    <span style={{ fontSize: '16px', fontWeight: 600, color: '#1F2937' }}>
+                      Cash on Delivery
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px', marginLeft: '28px' }}>
+                    Pay when you receive your order
+                  </p>
+                </div>
+                {selectedPaymentMethod.type === PaymentType.COD && (
+                  <CheckIcon style={{ width: '20px', height: '20px', color: '#0EA5E9' }} />
+                )}
+              </div>
+
+              {/* Other Payment Methods Option */}
+              <div
+                onClick={() => setShowPaymentDialog(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px',
+                  backgroundColor: selectedPaymentMethod.type !== PaymentType.COD ? '#F0F9FF' : 'transparent',
+                  border: selectedPaymentMethod.type !== PaymentType.COD ? '2px solid #0EA5E9' : '1px solid #E5E7EB',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedPaymentMethod.type === PaymentType.COD) {
+                    e.currentTarget.style.backgroundColor = '#F9FAFB';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedPaymentMethod.type === PaymentType.COD) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  border: selectedPaymentMethod.type !== PaymentType.COD ? '6px solid #0EA5E9' : '2px solid #9CA3AF',
+                  marginRight: '12px',
+                  transition: 'all 0.2s'
+                }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CreditCardIcon style={{ width: '20px', height: '20px', color: '#8B5CF6' }} />
+                    <span style={{ fontSize: '16px', fontWeight: 600, color: '#1F2937' }}>
+                      Other Payment Method
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px', marginLeft: '28px' }}>
+                    Bkash, Nagad, Rocket
+                  </p>
+                </div>
+                {selectedPaymentMethod.type !== PaymentType.COD && (
+                  <CheckIcon style={{ width: '20px', height: '20px', color: '#0EA5E9' }} />
+                )}
+              </div>
+
+              {/* Show selected digital payment details */}
+              {selectedPaymentMethod.type !== PaymentType.COD && selectedPaymentMethod.details && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '12px',
+                  backgroundColor: '#F3F4F6',
+                  borderRadius: '8px',
+                  borderLeft: `4px solid ${paymentMethods[selectedPaymentMethod.type].color}`
+                }}>
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#1F2937' }}>
+                    {getPaymentDisplayText()}
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+                    Transaction ID: {selectedPaymentMethod.details.split(',')[1]}
+                  </p>
+                </div>
+              )}
             </div>
           </ModernCard>
         </section>
@@ -655,6 +1293,14 @@ function CheckoutPageContent() {
           )}
         </button>
       </div>
+
+      {/* Payment Method Dialog */}
+      {showPaymentDialog && (
+        <PaymentMethodDialog
+          onClose={() => setShowPaymentDialog(false)}
+          onPaymentSelected={handlePaymentSelect}
+        />
+      )}
 
       {/* Order Sent Overlay */}
       {showOrderSent && <OrderSentOverlay onComplete={handleOrderSentComplete} />}
