@@ -79,31 +79,35 @@ function HomePageContent() {
         setOffers(fetchedOffers);
 
         // 3. Process Main Restaurants
-        const mainRestaurants = restaurantsSnap.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name || 'No Name',
-          cuisine: doc.data().cuisine || 'General',
-          imageUrl: doc.data().imageUrl || null,
-          type: 'MAIN',
-          priority: doc.data().priority || 999,
-          open: 'yes'
-        }));
+     // AFTER — Android এর getLong() এর মতো explicitly integer এ convert করো
+const mainRestaurants = restaurantsSnap.docs.map((doc) => ({
+    id: doc.id,
+    name: doc.data().name || 'No Name',
+    cuisine: doc.data().cuisine || 'General',
+    imageUrl: doc.data().imageUrl || null,
+    type: 'MAIN',
+    priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
+    open: 'yes'
+}));
 
-        // 4. Process Mini Restaurants
-        const miniRestaurants = miniRestaurantsSnap.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().name || 'No Name',
-          cuisine: doc.data().cuisine || 'Shop',
-          imageUrl: doc.data().imageUrl || null,
-          type: 'MINI',
-          priority: doc.data().priority || 999,
-          open: doc.data().open || 'no'
-        }));
+const miniRestaurants = miniRestaurantsSnap.docs.map((doc) => ({
+    id: doc.id,
+    name: doc.data().name || 'No Name',
+    cuisine: doc.data().cuisine || 'Shop',
+    imageUrl: doc.data().imageUrl || null,
+    type: 'MINI',
+    priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
+    open: doc.data().open || 'no'
+}));
 
         // 5. Merge and Sort by Priority (Exact logic from your Android code)
-        const combined = [...mainRestaurants, ...miniRestaurants].sort((a, b) => {
-            return (a.priority || 999) - (b.priority || 999);
-        });
+       // AFTER — matches Android: sort by priority (nulls last), then by name A→Z
+// AFTER — priority দিয়ে sort, same priority হলে fetch order maintain করো
+const combined = [...mainRestaurants, ...miniRestaurants].sort((a, b) => {
+    const pa = a.priority != null ? a.priority : Number.MAX_SAFE_INTEGER;
+    const pb = b.priority != null ? b.priority : Number.MAX_SAFE_INTEGER;
+    return pa - pb; // stable sort — same priority হলে array order অপরিবর্তিত থাকে
+});
         
         setCombinedRestaurants(combined);
         setAllMiniRestaurants(miniRestaurants);
