@@ -22,12 +22,20 @@ function HomePageContent() {
   // --- State ---
   const [userProfile, setUserProfile] = useState(null);
   const [offers, setOffers] = useState([]);
-  const [combinedRestaurants, setCombinedRestaurants] = useState([]); // Unified list for the UI
+  const [combinedRestaurants, setCombinedRestaurants] = useState([]);
   const [allSubCategories, setAllSubCategories] = useState([]);
-  const [allMiniRestaurants, setAllMiniRestaurants] = useState([]); // Kept for Search Results
+  const [allMiniRestaurants, setAllMiniRestaurants] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAppDialog, setShowAppDialog] = useState(() => {
+    return sessionStorage.getItem('appDialogDismissed') !== 'true';
+  });
+
+  const handleCloseDialog = () => {
+    sessionStorage.setItem('appDialogDismissed', 'true');
+    setShowAppDialog(false);
+  };
 
   // --- Fetch Data ---
   useEffect(() => {
@@ -63,7 +71,7 @@ function HomePageContent() {
           return;
         }
 
-        // --- Fetch Data in parallel (Matching Android Logic) ---
+        // --- Fetch Data in parallel ---
         const [offersSnap, restaurantsSnap, subCategoriesSnap, miniRestaurantsSnap] = await Promise.all([
           getDocs(query(collection(db, 'offers'), where('availableLocations', 'array-contains', userLocation))),
           getDocs(query(collection(db, 'restaurants'), where('deliveryLocations', 'array-contains', userLocation))),
@@ -79,40 +87,38 @@ function HomePageContent() {
         setOffers(fetchedOffers);
 
         // 3. Process Main Restaurants
-     // AFTER — Android এর getLong() এর মতো explicitly integer এ convert করো
-const mainRestaurants = restaurantsSnap.docs.map((doc) => ({
-    id: doc.id,
-    name: doc.data().name || 'No Name',
-    cuisine: doc.data().cuisine || 'General',
-    imageUrl: doc.data().imageUrl || null,
-    type: 'MAIN',
-    priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
-    open: 'yes'
-}));
+        const mainRestaurants = restaurantsSnap.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.data().name || 'No Name',
+          cuisine: doc.data().cuisine || 'General',
+          imageUrl: doc.data().imageUrl || null,
+          type: 'MAIN',
+          priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
+          open: 'yes'
+        }));
 
-const miniRestaurants = miniRestaurantsSnap.docs.map((doc) => ({
-    id: doc.id,
-    name: doc.data().name || 'No Name',
-    cuisine: doc.data().cuisine || 'Shop',
-    imageUrl: doc.data().imageUrl || null,
-    type: 'MINI',
-    priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
-    open: doc.data().open || 'no'
-}));
+        // 4. Process Mini Restaurants
+        const miniRestaurants = miniRestaurantsSnap.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.data().name || 'No Name',
+          cuisine: doc.data().cuisine || 'Shop',
+          imageUrl: doc.data().imageUrl || null,
+          type: 'MINI',
+          priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
+          open: doc.data().open || 'no'
+        }));
 
-        // 5. Merge and Sort by Priority (Exact logic from your Android code)
-       // AFTER — matches Android: sort by priority (nulls last), then by name A→Z
-// AFTER — priority দিয়ে sort, same priority হলে fetch order maintain করো
-const combined = [...mainRestaurants, ...miniRestaurants].sort((a, b) => {
-    const pa = a.priority != null ? a.priority : Number.MAX_SAFE_INTEGER;
-    const pb = b.priority != null ? b.priority : Number.MAX_SAFE_INTEGER;
-    return pa - pb; // stable sort — same priority হলে array order অপরিবর্তিত থাকে
-});
-        
+        // 5. Merge and Sort by Priority
+        const combined = [...mainRestaurants, ...miniRestaurants].sort((a, b) => {
+          const pa = a.priority != null ? a.priority : Number.MAX_SAFE_INTEGER;
+          const pb = b.priority != null ? b.priority : Number.MAX_SAFE_INTEGER;
+          return pa - pb;
+        });
+
         setCombinedRestaurants(combined);
         setAllMiniRestaurants(miniRestaurants);
 
-        // 6. Process SubCategories (Counting items)
+        // 6. Process SubCategories
         const fetchedSubCats = subCategoriesSnap.docs.map((doc) => ({
           id: doc.id,
           name: doc.data().name || '',
@@ -150,15 +156,12 @@ const combined = [...mainRestaurants, ...miniRestaurants].sort((a, b) => {
     fetchData();
   }, [user]);
 
-  // --- Unified Navigation Handler ---
+  // --- Navigation Handlers ---
   const handleItemClick = (item) => {
     const encodedName = encodeURIComponent(item.name);
-    
     if (item.type === 'MAIN') {
-      // Navigate to Restaurant Menu
       router.push(`/restaurant/${item.id}/${encodedName}`);
     } else {
-      // Navigate to Mini Restaurant Grid (if open)
       if (item.open === 'no') return;
       router.push(`/items/miniRes/${item.id}?title=${encodedName}`);
     }
@@ -183,23 +186,16 @@ const combined = [...mainRestaurants, ...miniRestaurants].sort((a, b) => {
   const handleNotificationClick = () => router.push('/orders');
   const handleFavoriteClick = () => alert('Favorites clicked!');
 
-  // --- Search Results Calculation ---
+  // --- Search Results ---
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return null;
-
     const lowerQuery = searchQuery.toLowerCase();
-
-    // Use combined list for restaurant searching to include both types
     const restaurantResults = combinedRestaurants
-      .filter(
-        (r) => r.name.toLowerCase().includes(lowerQuery) || r.cuisine.toLowerCase().includes(lowerQuery)
-      )
+      .filter((r) => r.name.toLowerCase().includes(lowerQuery) || r.cuisine.toLowerCase().includes(lowerQuery))
       .map((r) => ({ type: 'restaurant', data: r }));
-
     const subCategoryResults = allSubCategories
       .filter((sc) => sc.name.toLowerCase().includes(lowerQuery))
       .map((sc) => ({ type: 'subCategory', data: sc }));
-
     return [...restaurantResults, ...subCategoryResults];
   }, [searchQuery, combinedRestaurants, allSubCategories]);
 
@@ -207,7 +203,7 @@ const combined = [...mainRestaurants, ...miniRestaurants].sort((a, b) => {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 80px)' }}>
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: '18px', fontWeight: 600, color: '#4B5563' }}>Loading Yumzy...</p>
+          <p style={{ fontSize: '18px', fontWeight: 600, color: '#4B5563' }}>Loading Foodish...</p>
           <LoadingSpinner />
         </div>
       </div>
@@ -273,21 +269,21 @@ const combined = [...mainRestaurants, ...miniRestaurants].sort((a, b) => {
       <SearchResultsList
         results={searchResults}
         onRestaurantClick={(id, name) => {
-            const item = combinedRestaurants.find(r => r.id === id);
-            if (item) handleItemClick(item);
+          const item = combinedRestaurants.find(r => r.id === id);
+          if (item) handleItemClick(item);
         }}
         onSubCategoryClick={handleSubCategorySearchClick}
         onMiniRestaurantClick={handleMiniRestaurantSearchClick}
       />
 
-      {/* --- NEW: WhatsApp Helpline Button --- */}
+      {/* --- WhatsApp Helpline Button --- */}
       <a
         href="https://wa.me/8801746324620"
         target="_blank"
         rel="noopener noreferrer"
         style={{
           position: 'fixed',
-          bottom: '100px', // Matches your Android FAB padding
+          bottom: '100px',
           right: '20px',
           width: '50px',
           height: '50px',
@@ -303,15 +299,116 @@ const combined = [...mainRestaurants, ...miniRestaurants].sort((a, b) => {
         onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
         onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
       >
-        <svg
-          viewBox="0 0 24 24"
-          width="30"
-          height="30"
-          fill="white"
-        >
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="white">
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .004 5.411.001 12.045c0 2.12.554 4.188 1.597 6.011L0 24l6.135-1.61a11.77 11.77 0 005.911 1.586h.005c6.635 0 12.048-5.414 12.052-12.049a11.762 11.762 0 00-3.418-8.52z" />
         </svg>
       </a>
+
+      {/* --- App Download Dialog --- */}
+      {showAppDialog && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '16px',
+            padding: '28px 24px 24px',
+            width: '320px',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.25)',
+            position: 'relative',
+            textAlign: 'center',
+          }}>
+            {/* Close Button */}
+            <button
+              onClick={handleCloseDialog}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '20px',
+                color: '#6B7280',
+                lineHeight: 1,
+                padding: '4px',
+              }}
+            >
+              &#x2715;
+            </button>
+
+            {/* Icon */}
+            <div style={{
+              width: '64px',
+              height: '64px',
+              backgroundColor: '#FFF7ED',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+              fontSize: '32px',
+            }}>
+              🍔
+            </div>
+
+            {/* Text */}
+            <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1F2937', margin: '0 0 8px' }}>
+              Get the Foodish App!
+            </h2>
+            <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 24px', lineHeight: '1.5' }}>
+              For a faster and smoother experience, download our Android app.
+            </p>
+
+            {/* Download Button */}
+            <a
+              href="https://play.google.com/store/apps/details?id=com.yumzy.userapp"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                backgroundColor: '#1F2937',
+                color: '#fff',
+                borderRadius: '10px',
+                padding: '12px 20px',
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: '15px',
+                marginBottom: '12px',
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
+                <path d="M3.18 23.76a2 2 0 001.94-.21l11.34-6.55-2.9-2.9-10.38 9.66zM.54 1.1A2 2 0 000 2.54v18.92a2 2 0 00.54 1.44l.08.07 10.59-10.59v-.25L.62 1.03l-.08.07zM20.3 10.4l-2.88-1.66-3.24 3.24 3.24 3.24 2.9-1.68a2.02 2.02 0 000-3.14zM5.12.45L16.46 7 13.56 9.9 3.18.45A2 2 0 005.12.45z" />
+              </svg>
+              Download on Google Play
+            </a>
+
+            {/* Skip */}
+            <button
+              onClick={handleCloseDialog}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#9CA3AF',
+                fontSize: '13px',
+              }}
+            >
+              Continue on Web
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
