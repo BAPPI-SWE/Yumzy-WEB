@@ -1,10 +1,10 @@
-import { ShoppingCartIcon, BuildingStorefrontIcon, BeakerIcon, GiftIcon } from '@heroicons/react/24/outline';
+import { ShoppingCartIcon, BuildingStorefrontIcon, BeakerIcon, GiftIcon, InboxIcon } from '@heroicons/react/24/outline';
 import { useState } from 'react';
 
 // Define categories
 const categories = [
   { id: 'fast_food', name: 'Fast Food', Icon: BuildingStorefrontIcon },
-  { id: 'pharmacy', name: 'Pharmacy', Icon: BeakerIcon },
+  { id: 'pharmacy', name: 'Rice & Curry', Icon: InboxIcon },
   { id: 'personal_care', name: 'City Food', Icon: GiftIcon },
   { id: 'grocery', name: 'Grocery', Icon: ShoppingCartIcon },
 ];
