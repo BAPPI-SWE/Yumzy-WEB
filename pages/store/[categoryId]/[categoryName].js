@@ -14,6 +14,19 @@ import {
 } from '@heroicons/react/24/solid';
 import { useAuth } from '../../../context/AuthContext';
 
+// --- Helper: Split array into chunks of given size ---
+async function batchInQuery(collectionRef, field, values) {
+  if (!values || values.length === 0) return [];
+  const chunks = [];
+  for (let i = 0; i < values.length; i += 30) {
+    chunks.push(values.slice(i, i + 30));
+  }
+  const snapshots = await Promise.all(
+    chunks.map(chunk => getDocs(query(collectionRef, where(field, 'in', chunk))))
+  );
+  return snapshots.flatMap(snap => snap.docs);
+}
+
 // --- Announcement Card ---
 const AnnouncementCard = ({ announcement }) => {
   return (
@@ -220,27 +233,23 @@ export default function SubCategoryListPage() {
             id: d.id,
             name: data.name || '',
             imageUrl: data.imageUrl || '',
-            // Ensure priority is treated as a number; fallback to a very high number
             priority: data.priority !== undefined && data.priority !== null ? Number(data.priority) : 9999
           };
         }).sort((a, b) => {
-          // Primary sort by priority
           if (a.priority !== b.priority) {
             return a.priority - b.priority;
           }
-          // Secondary sort by name (alphabetical)
           return a.name.localeCompare(b.name);
         });
         
         setSubCategories(fetchedSubCats);
 
-        // 5. Item Counts
+        // 5. Item Counts — FIXED: Use batch query to handle more than 30 sub-categories
         if (fetchedSubCats.length > 0) {
           const subCatNames = fetchedSubCats.map(sc => sc.name);
-          const itemsQuery = query(collection(db, 'store_items'), where('subCategory', 'in', subCatNames));
-          const itemsSnap = await getDocs(itemsQuery);
+          const itemDocs = await batchInQuery(collection(db, 'store_items'), 'subCategory', subCatNames);
           const counts = {};
-          itemsSnap.docs.forEach(itemDoc => {
+          itemDocs.forEach(itemDoc => {
             const subCat = itemDoc.data().subCategory;
             if (subCat) counts[subCat] = (counts[subCat] || 0) + 1;
           });

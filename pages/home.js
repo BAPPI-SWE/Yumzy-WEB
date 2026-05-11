@@ -15,6 +15,19 @@ import CategorySection from '../components/CategorySection';
 import RestaurantCard from '../components/RestaurantCard';
 import SearchResultsList from '../components/SearchResultsList';
 
+// --- Helper: Split array into chunks of given size ---
+async function batchInQuery(collectionRef, field, values) {
+  if (!values || values.length === 0) return [];
+  const chunks = [];
+  for (let i = 0; i < values.length; i += 30) {
+    chunks.push(values.slice(i, i + 30));
+  }
+  const snapshots = await Promise.all(
+    chunks.map(chunk => getDocs(query(collectionRef, where(field, 'in', chunk))))
+  );
+  return snapshots.flatMap(snap => snap.docs);
+}
+
 function HomePageContent() {
   const { user } = useAuth();
   const router = useRouter();
@@ -129,15 +142,18 @@ function HomePageContent() {
         let finalSubCats = fetchedSubCats;
         if (fetchedSubCats.length > 0) {
           const subCategoryNames = fetchedSubCats.map((it) => it.name);
-          const itemsQuery = query(collection(db, 'store_items'), where('subCategory', 'in', subCategoryNames));
-          const itemsSnap = await getDocs(itemsQuery);
-          const itemCounts = itemsSnap.docs
+
+          // --- FIXED: Use batch query to handle more than 30 sub-categories ---
+          const itemDocs = await batchInQuery(collection(db, 'store_items'), 'subCategory', subCategoryNames);
+
+          const itemCounts = itemDocs
             .map((it) => it.data().subCategory)
             .filter(Boolean)
             .reduce((acc, name) => {
               acc[name] = (acc[name] || 0) + 1;
               return acc;
             }, {});
+
           finalSubCats = fetchedSubCats.map((subCat) => ({
             ...subCat,
             itemCount: itemCounts[subCat.name] || 0,
@@ -324,7 +340,6 @@ function HomePageContent() {
             position: 'relative',
             textAlign: 'center',
           }}>
-            {/* Close Button */}
             <button
               onClick={handleCloseDialog}
               style={{
@@ -343,7 +358,6 @@ function HomePageContent() {
               &#x2715;
             </button>
 
-            {/* Icon */}
             <div style={{
               width: '64px',
               height: '64px',
@@ -358,7 +372,6 @@ function HomePageContent() {
               🍔
             </div>
 
-            {/* Text */}
             <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1F2937', margin: '0 0 8px' }}>
               Get the Foodish App!
             </h2>
@@ -366,7 +379,6 @@ function HomePageContent() {
               For a faster and smoother experience, download our Android app.
             </p>
 
-            {/* Download Button */}
             <a
               href="https://play.google.com/store/apps/details?id=com.yumzy.userapp"
               target="_blank"
@@ -392,7 +404,6 @@ function HomePageContent() {
               Download on Google Play
             </a>
 
-            {/* Skip */}
             <button
               onClick={handleCloseDialog}
               style={{
