@@ -7,7 +7,7 @@ export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState({});
   
   // Maximum items limit
-  const MAX_ITEMS = 5;
+  const MAX_ITEMS = 500;
 
   // --- Load cart from localStorage when the app starts ---
   useEffect(() => {
