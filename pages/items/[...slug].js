@@ -34,9 +34,55 @@ const getSortPrice = (item) => {
   return item.price;
 };
 
+// --- Responsive grid style injected once ---
+const GRID_STYLE_ID = 'item-grid-responsive-style';
+function injectGridStyle() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(GRID_STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = GRID_STYLE_ID;
+  style.textContent = `
+    .item-grid {
+      display: grid;
+      gap: 16px;
+      padding: 16px;
+      /* Mobile: 2 columns */
+      grid-template-columns: repeat(2, 1fr);
+    }
+    @media (min-width: 640px) {
+      .item-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    @media (min-width: 900px) {
+      .item-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    @media (min-width: 1200px) {
+      .item-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+    }
+    /* Card image height: taller on mobile, capped on desktop */
+    .item-card-img {
+      height: 144px;
+    }
+    @media (min-width: 640px) {
+      .item-card-img {
+        height: 160px;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 // --- Item Card ---
 const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClick, isEnabled }) => {
   const [isHovered, setIsHovered] = useState(false);
+
+  // Inject responsive styles on first render
+  useEffect(() => { injectGridStyle(); }, []);
 
   const displayPrice =
     item.variants && item.variants.length > 0
@@ -54,7 +100,7 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
       style={{
         backgroundColor: 'white',
         borderRadius: '8px',
-        boxShadow: isHovered 
+        boxShadow: isHovered
           ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
           : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
         overflow: 'hidden',
@@ -62,7 +108,7 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
         flexDirection: 'column',
         opacity: !isEnabled ? 0.6 : 1,
         cursor: isEnabled ? 'pointer' : 'default',
-        transition: 'all 0.2s'
+        transition: 'all 0.2s',
       }}
     >
       <button
@@ -74,10 +120,11 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
           border: 'none',
           padding: 0,
           backgroundColor: 'transparent',
-          cursor: isEnabled ? 'pointer' : 'default'
+          cursor: isEnabled ? 'pointer' : 'default',
         }}
       >
-        <div style={{ position: 'relative', height: '144px', width: '100%', backgroundColor: '#E5E7EB' }}>
+        {/* Use className for responsive height */}
+        <div className="item-card-img" style={{ position: 'relative', width: '100%', backgroundColor: '#E5E7EB' }}>
           <img
             src={item.imageUrl || '/placeholder-image.png'}
             alt={item.name}
@@ -86,7 +133,7 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
               inset: 0,
               width: '100%',
               height: '100%',
-              objectFit: 'cover'
+              objectFit: 'cover',
             }}
             loading="lazy"
           />
@@ -100,14 +147,10 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
               alignItems: 'center',
               justifyContent: 'center',
               color: 'white',
-              padding: '8px'
+              padding: '8px',
             }}>
               <NoSymbolIcon style={{ width: '32px', height: '32px', marginBottom: '4px' }} />
-              <span style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                textAlign: 'center'
-              }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, textAlign: 'center' }}>
                 {item.stock !== 'yes' ? 'Out of Stock' : 'Shop Closed'}
               </span>
             </div>
@@ -127,13 +170,14 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
               color: 'white',
               backgroundColor: '#DC0C25',
               borderRadius: '9999px',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
             }}>
               {quantity}
             </span>
           )}
         </div>
       </button>
+
       <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
         <p style={{
           fontSize: '14px',
@@ -145,23 +189,16 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
           overflow: 'hidden',
           display: '-webkit-box',
           WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical'
+          WebkitBoxOrient: 'vertical',
         }}>
           {item.name}
         </p>
-        
-        {/* --- MODIFICATION START: Show Mini Res Name on Card --- */}
+
         {item.miniResName && item.miniResName !== 'Yumzy Store' && (
-          <span style={{
-            fontSize: '11px',
-            color: '#D50032',
-            fontWeight: 500,
-            marginTop: '4px'
-          }}>
+          <span style={{ fontSize: '11px', color: '#D50032', fontWeight: 500, marginTop: '4px' }}>
             {item.miniResName}
           </span>
         )}
-        {/* --- MODIFICATION END --- */}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '8px' }}>
           <span style={{ fontSize: '16px', fontWeight: 700, color: '#DC0C25' }}>{displayPrice}</span>
@@ -180,7 +217,7 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
                 borderRadius: '9999px',
                 border: 'none',
                 cursor: isEnabled ? 'pointer' : 'not-allowed',
-                transition: 'background-color 0.2s'
+                transition: 'background-color 0.2s',
               }}
               onMouseEnter={(e) => { if (isEnabled) e.currentTarget.style.backgroundColor = 'rgba(220, 12, 37, 0.2)'; }}
               onMouseLeave={(e) => { if (isEnabled) e.currentTarget.style.backgroundColor = 'rgba(220, 12, 37, 0.1)'; }}
@@ -226,7 +263,7 @@ const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled
           borderRadius: '9999px',
           border: 'none',
           cursor: isEnabled ? 'pointer' : 'not-allowed',
-          transition: 'opacity 0.2s'
+          transition: 'opacity 0.2s',
         }}
         onMouseEnter={(e) => { if (isEnabled) e.currentTarget.style.opacity = '0.9'; }}
         onMouseLeave={(e) => { if (isEnabled) e.currentTarget.style.opacity = '1'; }}
@@ -251,19 +288,14 @@ const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled
             borderRadius: '9999px',
             border: 'none',
             cursor: isEnabled ? 'pointer' : 'not-allowed',
-            transition: 'background-color 0.2s'
+            transition: 'background-color 0.2s',
           }}
           onMouseEnter={(e) => { if (isEnabled) e.currentTarget.style.backgroundColor = '#D1D5DB'; }}
           onMouseLeave={(e) => { if (isEnabled) e.currentTarget.style.backgroundColor = '#E5E7EB'; }}
         >
           <MinusIcon style={{ width: iconSize, height: iconSize }} />
         </button>
-        <span style={{
-          fontSize: numberSize,
-          fontWeight: 700,
-          minWidth: '16px',
-          textAlign: 'center'
-        }}>
+        <span style={{ fontSize: numberSize, fontWeight: 700, minWidth: '16px', textAlign: 'center' }}>
           {quantity}
         </span>
         <button
@@ -280,7 +312,7 @@ const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled
             borderRadius: '9999px',
             border: 'none',
             cursor: isEnabled ? 'pointer' : 'not-allowed',
-            transition: 'opacity 0.2s'
+            transition: 'opacity 0.2s',
           }}
           onMouseEnter={(e) => { if (isEnabled) e.currentTarget.style.opacity = '0.9'; }}
           onMouseLeave={(e) => { if (isEnabled) e.currentTarget.style.opacity = '1'; }}
@@ -304,7 +336,7 @@ const CartBottomBar = ({ onAddToCart, onPlaceOrder, totalItems }) => {
       backgroundColor: 'white',
       padding: '16px',
       boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.1)',
-      zIndex: 50
+      zIndex: 50,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', maxWidth: '512px', margin: '0 auto' }}>
         <button
@@ -316,7 +348,7 @@ const CartBottomBar = ({ onAddToCart, onPlaceOrder, totalItems }) => {
             color: '#DC0C25',
             backgroundColor: 'transparent',
             cursor: 'pointer',
-            transition: 'background-color 0.2s'
+            transition: 'background-color 0.2s',
           }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -339,7 +371,7 @@ const CartBottomBar = ({ onAddToCart, onPlaceOrder, totalItems }) => {
             fontWeight: 600,
             border: 'none',
             cursor: 'pointer',
-            transition: 'opacity 0.2s'
+            transition: 'opacity 0.2s',
           }}
           onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
           onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -356,7 +388,6 @@ const CartBottomBar = ({ onAddToCart, onPlaceOrder, totalItems }) => {
 export default function ItemGridPage() {
   const router = useRouter();
   const { slug, title: encodedTitle } = router.query;
-  // Fallback title if slug exists but title doesn't
   const decodedSlugTitle = slug?.[1] ? decodeURIComponent(slug[1]) : 'Items';
   const pageTitle = encodedTitle ? decodeURIComponent(encodedTitle) : decodedSlugTitle;
 
@@ -371,13 +402,11 @@ export default function ItemGridPage() {
   const filterType = slug?.[0];
   const filterValue = slug?.[1] ? decodeURIComponent(slug[1]) : null;
 
+  // Inject responsive CSS on mount
+  useEffect(() => { injectGridStyle(); }, []);
+
   useEffect(() => {
-    if (!filterType || !filterValue) {
-      if (router.isReady) {
-        // Don't set error if router is not ready, just wait
-      }
-      return;
-    }
+    if (!filterType || !filterValue) return;
 
     const fetchData = async () => {
       setIsLoading(true);
@@ -387,40 +416,32 @@ export default function ItemGridPage() {
       try {
         let itemsQuery;
         let shopStatusMap = {};
-        
-        // --- MODIFICATION: Create a map to hold shop names ---
-        let shopNameMap = {}; 
+        let shopNameMap = {};
 
         if (filterType === 'subCategory') {
           itemsQuery = query(collection(db, 'store_items'), where('subCategory', '==', filterValue));
           const itemsSnap = await getDocs(itemsQuery);
-          // Get all unique miniRes IDs from the items
           const miniResIds = [...new Set(itemsSnap.docs.map((d) => d.data().miniRes).filter(Boolean))];
 
           if (miniResIds.length > 0) {
-            // Fetch all mini-restaurants in one go
             const shopStatusQuery = query(collection(db, 'mini_restaurants'), where('__name__', 'in', miniResIds));
             const shopStatusSnap = await getDocs(shopStatusQuery);
             shopStatusSnap.docs.forEach((doc) => {
               shopStatusMap[doc.id] = doc.data().open === 'yes';
-              // --- MODIFICATION: Store the name in the map ---
-              shopNameMap[doc.id] = doc.data().name || 'Yumzy Store'; 
+              shopNameMap[doc.id] = doc.data().name || 'Yumzy Store';
             });
           }
         } else if (filterType === 'miniRes') {
           itemsQuery = query(collection(db, 'store_items'), where('miniRes', '==', filterValue));
-          // Fetch the specific mini-restaurant
           const shopDocRef = doc(db, 'mini_restaurants', filterValue);
           const shopDocSnap = await getDoc(shopDocRef);
-          
+
           if (shopDocSnap.exists()) {
             shopStatusMap[filterValue] = shopDocSnap.data().open === 'yes';
-            // --- MODIFICATION: Store the name in the map ---
             shopNameMap[filterValue] = shopDocSnap.data().name || 'Yumzy Store';
           } else {
-            // If shop doesn't exist, mark as closed
             shopStatusMap[filterValue] = false;
-            shopNameMap[filterValue] = 'Yumzy Store'; // Default name
+            shopNameMap[filterValue] = 'Yumzy Store';
           }
         } else {
           throw new Error('Invalid filter type');
@@ -430,14 +451,9 @@ export default function ItemGridPage() {
         const fetchedItems = finalItemsSnap.docs.map((doc) => {
           const data = doc.data();
           const miniResId = data.miniRes;
-          
-          // Determine shop status
-          const isShopOpen = !miniResId || shopStatusMap[miniResId] !== false; // Default to open if no resId
+          const isShopOpen = !miniResId || shopStatusMap[miniResId] !== false;
           const isInStock = data.stock === 'yes';
           const isItemEnabled = isShopOpen && isInStock;
-
-          // --- MODIFICATION: Get the name from our map ---
-          // Fallback to data.miniResName (from item doc) only if not in map, then to empty string
           const miniResName = miniResId ? (shopNameMap[miniResId] || data.miniResName || '') : (data.miniResName || '');
 
           const multiVariant = parseInt(data.multiVariant || 0);
@@ -462,17 +478,16 @@ export default function ItemGridPage() {
             isEnabled: isItemEnabled,
             variants,
             miniResId: miniResId || '',
-            miniResName: miniResName, // --- Use the corrected name ---
+            miniResName,
           };
         });
-        
-        // --- MODIFICATION: Default sorting by priority if it exists ---
+
         const sortedByPriority = fetchedItems.sort((a, b) => {
-          const priorityA = a.priority ?? 999; // Default to high number if no priority
+          const priorityA = a.priority ?? 999;
           const priorityB = b.priority ?? 999;
           return priorityA - priorityB;
         });
-        
+
         setAllItems(sortedByPriority);
       } catch (err) {
         console.error('Error fetching items:', err);
@@ -486,12 +501,9 @@ export default function ItemGridPage() {
   }, [filterType, filterValue, router.isReady]);
 
   const sortedItems = useMemo(() => {
-    // We start with allItems, which is already sorted by priority
     const itemsToSort = [...allItems];
-    
     switch (sortOrder) {
       case SortOrder.PRICE_LOW_TO_HIGH:
-        // Sort by price, then by original priority
         return itemsToSort.sort((a, b) => {
           const priceA = getSortPrice(a);
           const priceB = getSortPrice(b);
@@ -499,7 +511,6 @@ export default function ItemGridPage() {
           return (a.priority ?? 999) - (b.priority ?? 999);
         });
       case SortOrder.PRICE_HIGH_TO_LOW:
-         // Sort by price, then by original priority
         return itemsToSort.sort((a, b) => {
           const priceA = getSortPrice(a);
           const priceB = getSortPrice(b);
@@ -507,7 +518,6 @@ export default function ItemGridPage() {
           return (a.priority ?? 999) - (b.priority ?? 999);
         });
       default:
-        // Default is already sorted by priority
         return itemsToSort;
     }
   }, [allItems, sortOrder]);
@@ -524,26 +534,28 @@ export default function ItemGridPage() {
   };
 
   const handlePlaceOrder = () => router.push(`/checkout/yumzy_store`);
-  const handleAddToCart = () => alert('Items saved to cart! (This is a placeholder)'); // Placeholder
+  const handleAddToCart = () => alert('Items saved to cart! (This is a placeholder)');
   const handleItemClick = (item) =>
     item.isEnabled
       ? setSelectedItem(item)
-      : alert(item.stock !== 'yes' ? 'Out of Stock' : 'Shop Closed'); // Simple feedback
+      : alert(item.stock !== 'yes' ? 'Out of Stock' : 'Shop Closed');
   const handleCloseModal = () => setSelectedItem(null);
 
   return (
     <ProtectedRoute>
       <div style={{ minHeight: '100vh', backgroundColor: '#F9FAFB', display: 'flex', flexDirection: 'column' }}>
+
+        {/* --- Top Bar --- */}
         <div style={{
           position: 'sticky',
           top: 0,
           zIndex: 30,
           backgroundColor: 'white',
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
           padding: '12px',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          gap: '8px',
         }}>
           <button
             onClick={() => router.back()}
@@ -553,7 +565,7 @@ export default function ItemGridPage() {
               border: 'none',
               backgroundColor: 'transparent',
               cursor: 'pointer',
-              transition: 'background-color 0.2s'
+              transition: 'background-color 0.2s',
             }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -567,11 +579,10 @@ export default function ItemGridPage() {
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            flex: 1
+            flex: 1,
           }}>
             {pageTitle}
           </h1>
-
           <button
             onClick={handleSortClick}
             style={{
@@ -580,16 +591,14 @@ export default function ItemGridPage() {
               border: 'none',
               backgroundColor: 'transparent',
               cursor: 'pointer',
-              transition: 'background-color 0.2s'
+              transition: 'background-color 0.2s',
             }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             title={
-              sortOrder === SortOrder.NONE
-                ? 'Sort by Price'
-                : sortOrder === SortOrder.PRICE_LOW_TO_HIGH
-                ? 'Sorted: Low to High'
-                : 'Sorted: High to Low'
+              sortOrder === SortOrder.NONE ? 'Sort by Price'
+              : sortOrder === SortOrder.PRICE_LOW_TO_HIGH ? 'Sorted: Low to High'
+              : 'Sorted: High to Low'
             }
           >
             {sortOrder === SortOrder.NONE && <ArrowsUpDownIcon style={{ width: '24px', height: '24px', color: '#6B7280' }} />}
@@ -598,67 +607,68 @@ export default function ItemGridPage() {
           </button>
         </div>
 
+        {/* --- Content --- */}
+        {/* Max-width wrapper keeps the grid centred on very wide screens */}
         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '96px' }}>
-          {isLoading && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', paddingTop: '40px' }}>
-              <LoadingSpinner />
-            </div>
-          )}
+          <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
 
-          {!isLoading && error && (
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '24px', textAlign: 'center' }}>
-              <NoSymbolIcon style={{ width: '48px', height: '48px', color: '#F87171', marginBottom: '12px' }} />
-              <p style={{ color: '#DC2626' }}>{error}</p>
-            </div>
-          )}
+            {isLoading && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', paddingTop: '60px' }}>
+                <LoadingSpinner />
+              </div>
+            )}
 
-          {!isLoading && !error && sortedItems.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '24px', textAlign: 'center' }}>
-              <TagIcon style={{ width: '48px', height: '48px', color: '#9CA3AF', marginBottom: '12px' }} />
-              <p style={{ color: '#4B5563' }}>No items found.</p>
-            </div>
-          )}
+            {!isLoading && error && (
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px 24px', textAlign: 'center' }}>
+                <NoSymbolIcon style={{ width: '48px', height: '48px', color: '#F87171', marginBottom: '12px' }} />
+                <p style={{ color: '#DC2626' }}>{error}</p>
+              </div>
+            )}
 
-          {!isLoading && !error && sortedItems.length > 0 && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '16px',
-              padding: '16px'
-            }}>
-              {sortedItems.map((item) => {
-                let quantity = 0;
-                if (item.variants && item.variants.length > 0) {
-                  quantity = item.variants.reduce((sum, variant) => {
-                    const variantId = `${item.id}_${variant.name}`;
-                    return sum + (cart[variantId]?.quantity || 0);
-                  }, 0);
-                } else {
-                  quantity = cart[item.id]?.quantity || 0;
-                }
+            {!isLoading && !error && sortedItems.length === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px 24px', textAlign: 'center' }}>
+                <TagIcon style={{ width: '48px', height: '48px', color: '#9CA3AF', marginBottom: '12px' }} />
+                <p style={{ color: '#4B5563' }}>No items found.</p>
+              </div>
+            )}
 
-                const cartMenuItem = { id: item.id, name: item.name, price: item.price };
-                const restaurantDetails = {
-                  restaurantId: 'yumzy_store',
-                  // --- MODIFICATION: Ensure correct name is passed ---
-                  restaurantName: item.miniResName || 'Yumzy Store', 
-                };
+            {!isLoading && !error && sortedItems.length > 0 && (
+              // className drives the responsive columns via injected <style>
+              <div className="item-grid">
+                {sortedItems.map((item) => {
+                  let quantity = 0;
+                  if (item.variants && item.variants.length > 0) {
+                    quantity = item.variants.reduce((sum, variant) => {
+                      const variantId = `${item.id}_${variant.name}`;
+                      return sum + (cart[variantId]?.quantity || 0);
+                    }, 0);
+                  } else {
+                    quantity = cart[item.id]?.quantity || 0;
+                  }
 
-                return (
-                  <StoreItemCard
-                    key={item.id}
-                    item={item}
-                    quantity={quantity}
-                    onAdd={() => addToCart(cartMenuItem, restaurantDetails)}
-                    onIncrement={() => incrementItem(item.id)}
-                    onDecrement={() => decrementItem(item.id)}
-                    onClick={() => handleItemClick(item)}
-                    isEnabled={item.isEnabled}
-                  />
-                );
-              })}
-            </div>
-          )}
+                  const cartMenuItem = { id: item.id, name: item.name, price: item.price };
+                  const restaurantDetails = {
+                    restaurantId: 'yumzy_store',
+                    restaurantName: item.miniResName || 'Yumzy Store',
+                  };
+
+                  return (
+                    <StoreItemCard
+                      key={item.id}
+                      item={item}
+                      quantity={quantity}
+                      onAdd={() => addToCart(cartMenuItem, restaurantDetails)}
+                      onIncrement={() => incrementItem(item.id)}
+                      onDecrement={() => decrementItem(item.id)}
+                      onClick={() => handleItemClick(item)}
+                      isEnabled={item.isEnabled}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+          </div>
         </div>
 
         <CartBottomBar
