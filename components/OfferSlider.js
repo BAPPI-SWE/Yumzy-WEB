@@ -31,7 +31,7 @@ export default function OfferSlider({ offers }) {
         marginBottom: '12px',
         color: '#1F2937'
       }}>
-        Special Offers
+        Announcement
       </h2>
       <div style={{
         display: 'flex',

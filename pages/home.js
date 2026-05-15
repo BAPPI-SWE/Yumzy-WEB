@@ -28,6 +28,80 @@ async function batchInQuery(collectionRef, field, values) {
   return snapshots.flatMap(snap => snap.docs);
 }
 
+// --- Closed/Open Overlay Wrapper ---
+// Mirrors the Android MiniRestaurantSearchCard closed overlay logic
+function RestaurantCardWithStatus({ restaurant, onClick }) {
+  const isClosed = restaurant.type === 'MINI' && restaurant.open !== 'yes';
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {/* The card itself — pointer-events disabled when closed */}
+      <div style={{ pointerEvents: isClosed ? 'none' : 'auto' }}>
+        <RestaurantCard
+          restaurant={restaurant}
+          onClick={isClosed ? undefined : onClick}
+        />
+      </div>
+
+      {/* OPEN badge — only for MINI restaurants that are open */}
+      {restaurant.type === 'MINI' && !isClosed && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          backgroundColor: '#4CAF50',
+          color: '#fff',
+          fontSize: '11px',
+          fontWeight: 700,
+          padding: '4px 10px',
+          borderRadius: '0 16px 0 10px',
+          letterSpacing: '0.5px',
+          zIndex: 2,
+        }}>
+          OPEN
+        </div>
+      )}
+
+      {/* Dark overlay + CLOSED badge — mirrors Android isClosed block */}
+      {isClosed && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.60)',
+            borderRadius: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3,
+            cursor: 'not-allowed',
+          }}
+        >
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: '#DC0C25',
+            color: '#fff',
+            borderRadius: '12px',
+            padding: '10px 20px',
+            fontWeight: 700,
+            fontSize: '15px',
+            letterSpacing: '1px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          }}>
+            {/* Lock icon — matches Android Icons.Default.Lock */}
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
+              <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+            </svg>
+            CLOSED
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HomePageContent() {
   const { user } = useAuth();
   const router = useRouter();
@@ -178,7 +252,7 @@ function HomePageContent() {
     if (item.type === 'MAIN') {
       router.push(`/restaurant/${item.id}/${encodedName}`);
     } else {
-      if (item.open === 'no') return;
+      if (item.open !== 'yes') return;
       router.push(`/items/miniRes/${item.id}?title=${encodedName}`);
     }
   };
@@ -268,7 +342,7 @@ function HomePageContent() {
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                   {combinedRestaurants.map((res) => (
-                    <RestaurantCard
+                    <RestaurantCardWithStatus
                       key={res.id}
                       restaurant={res}
                       onClick={() => handleItemClick(res)}
