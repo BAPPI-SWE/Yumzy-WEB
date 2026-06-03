@@ -29,11 +29,13 @@ async function batchInQuery(collectionRef, field, values) {
 }
 
 // --- Closed/Open Overlay Wrapper ---
+// Mirrors the Android MiniRestaurantSearchCard closed overlay logic
 function RestaurantCardWithStatus({ restaurant, onClick }) {
   const isClosed = restaurant.type === 'MINI' && restaurant.open !== 'yes';
 
   return (
     <div style={{ position: 'relative' }}>
+      {/* The card itself — pointer-events disabled when closed */}
       <div style={{ pointerEvents: isClosed ? 'none' : 'auto' }}>
         <RestaurantCard
           restaurant={restaurant}
@@ -41,6 +43,7 @@ function RestaurantCardWithStatus({ restaurant, onClick }) {
         />
       </div>
 
+      {/* OPEN badge — only for MINI restaurants that are open */}
       {restaurant.type === 'MINI' && !isClosed && (
         <div style={{
           position: 'absolute',
@@ -59,6 +62,7 @@ function RestaurantCardWithStatus({ restaurant, onClick }) {
         </div>
       )}
 
+      {/* Dark overlay + CLOSED badge — mirrors Android isClosed block */}
       {isClosed && (
         <div
           style={{
@@ -86,6 +90,7 @@ function RestaurantCardWithStatus({ restaurant, onClick }) {
             letterSpacing: '1px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
           }}>
+            {/* Lock icon — matches Android Icons.Default.Lock */}
             <svg viewBox="0 0 24 24" width="18" height="18" fill="white">
               <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
             </svg>
@@ -93,305 +98,6 @@ function RestaurantCardWithStatus({ restaurant, onClick }) {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// --- Eid ul Azha Banner Dialog ---
-function EidBannerDialog({ onClose }) {
-  return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(0,0,0,0.65)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 2000,
-      padding: '16px',
-    }}>
-      <style>{`
-        @keyframes eidFadeInScale {
-          from { opacity: 0; transform: scale(0.88); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes eidFloatStar {
-          0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.7; }
-          50% { transform: translateY(-7px) rotate(15deg); opacity: 1; }
-        }
-        @keyframes eidCrescentGlow {
-          0%, 100% { filter: drop-shadow(0 0 5px #f5c842); }
-          50% { filter: drop-shadow(0 0 14px #f5c842); }
-        }
-        @keyframes eidShimmer {
-          0% { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
-        .eid-dialog-card {
-          animation: eidFadeInScale 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards;
-        }
-        .eid-star-1 { animation: eidFloatStar 3.1s ease-in-out infinite; }
-        .eid-star-2 { animation: eidFloatStar 2.4s ease-in-out infinite 0.5s; }
-        .eid-star-3 { animation: eidFloatStar 3.8s ease-in-out infinite 1s; }
-        .eid-star-4 { animation: eidFloatStar 2.9s ease-in-out infinite 1.5s; }
-        .eid-star-5 { animation: eidFloatStar 4.1s ease-in-out infinite 0.8s; }
-        .eid-crescent { animation: eidCrescentGlow 2.5s ease-in-out infinite; }
-        .eid-close-btn:hover { background: rgba(255,255,255,0.12) !important; }
-        .eid-cta-btn:hover { opacity: 0.9; transform: scale(1.01); }
-        .eid-cta-btn:active { transform: scale(0.98); }
-      `}</style>
-
-      <div
-        className="eid-dialog-card"
-        style={{
-          background: 'linear-gradient(160deg, #1a3a2a 0%, #0f2419 45%, #1c2e10 100%)',
-          borderRadius: '24px',
-          width: '100%',
-          maxWidth: '360px',
-          overflow: 'hidden',
-          border: '1.5px solid rgba(245,200,66,0.35)',
-          boxShadow: '0 8px 48px rgba(0,0,0,0.55)',
-          position: 'relative',
-        }}
-      >
-        {/* Top gold band */}
-        <div style={{
-          background: 'linear-gradient(90deg, #8B6508, #f5c842, #d4920e, #f5c842, #8B6508)',
-          height: '5px',
-          width: '100%',
-        }} />
-
-        {/* Floating decorative stars */}
-        <span className="eid-star-1" style={{ position: 'absolute', top: '18px', left: '22px', fontSize: '13px', color: '#f5c842', userSelect: 'none' }}>✦</span>
-        <span className="eid-star-2" style={{ position: 'absolute', top: '30px', right: '30px', fontSize: '10px', color: '#f5c842', userSelect: 'none' }}>✦</span>
-        <span className="eid-star-3" style={{ position: 'absolute', top: '14px', left: '48%', fontSize: '8px', color: '#f5c842', userSelect: 'none' }}>★</span>
-        <span className="eid-star-4" style={{ position: 'absolute', top: '62px', right: '18px', fontSize: '7px', color: '#c8a43a', userSelect: 'none' }}>✦</span>
-        <span className="eid-star-5" style={{ position: 'absolute', top: '56px', left: '16px', fontSize: '6px', color: '#c8a43a', userSelect: 'none' }}>★</span>
-
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="eid-close-btn"
-          style={{
-            position: 'absolute',
-            top: '14px',
-            right: '14px',
-            background: 'rgba(255,255,255,0.08)',
-            border: '0.5px solid rgba(255,255,255,0.15)',
-            borderRadius: '50%',
-            width: '28px',
-            height: '28px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            zIndex: 10,
-            color: 'rgba(255,255,255,0.6)',
-            fontSize: '14px',
-            lineHeight: 1,
-            transition: 'background 0.2s',
-          }}
-        >
-          ✕
-        </button>
-
-        {/* Crescent + Star */}
-        <div style={{ textAlign: 'center', paddingTop: '32px', paddingBottom: '4px' }}>
-          <svg
-            className="eid-crescent"
-            viewBox="0 0 80 80"
-            width="74"
-            height="74"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle cx="38" cy="40" r="24" fill="#f5c842" />
-            <circle cx="48" cy="33" r="19" fill="#1a3a2a" />
-            <polygon
-              points="66,22 68.5,29 76,29 70,33.5 72.5,40.5 66,36 59.5,40.5 62,33.5 56,29 63.5,29"
-              fill="#f5c842"
-            />
-          </svg>
-        </div>
-
-        {/* Heading */}
-        <div style={{ textAlign: 'center', padding: '4px 20px 0' }}>
-          <p style={{
-            fontSize: '11px',
-            letterSpacing: '3px',
-            color: '#c8a43a',
-            margin: '0 0 6px',
-            textTransform: 'uppercase',
-            fontWeight: 500,
-          }}>
-            Foodish পরিবারের পক্ষ থেকে
-          </p>
-
-          <h2 style={{
-            fontSize: '32px',
-            fontWeight: 800,
-            margin: 0,
-            color: '#f5c842',
-            letterSpacing: '1px',
-            lineHeight: 1.1,
-            textShadow: '0 2px 12px rgba(245,200,66,0.3)',
-          }}>
-            ঈদ মুবারক
-          </h2>
-
-          <p style={{
-            fontSize: '13px',
-            color: 'rgba(255,255,255,0.45)',
-            margin: '5px 0 0',
-            letterSpacing: '1.5px',
-            fontStyle: 'italic',
-          }}>
-            ঈদুল আযহা ২০২৬
-          </p>
-        </div>
-
-        {/* Gold divider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '16px 24px 14px' }}>
-          <div style={{ flex: 1, height: '0.5px', background: 'rgba(245,200,66,0.3)' }} />
-          <span style={{ color: '#f5c842', fontSize: '13px' }}>✦</span>
-          <div style={{ flex: 1, height: '0.5px', background: 'rgba(245,200,66,0.3)' }} />
-        </div>
-
-        {/* Notice box */}
-        <div style={{
-          margin: '0 18px',
-          background: 'rgba(0,0,0,0.28)',
-          border: '1px solid rgba(245,200,66,0.2)',
-          borderRadius: '16px',
-          padding: '18px 16px',
-          textAlign: 'center',
-        }}>
-          {/* Notice label */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'rgba(245,200,66,0.12)',
-            border: '0.5px solid rgba(245,200,66,0.3)',
-            borderRadius: '20px',
-            padding: '4px 12px',
-            marginBottom: '12px',
-          }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="#f5c842" strokeWidth="1.5"/>
-              <path d="M12 7v5l3 3" stroke="#f5c842" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <span style={{
-              fontSize: '10px',
-              fontWeight: 700,
-              color: '#f5c842',
-              letterSpacing: '2px',
-              textTransform: 'uppercase',
-            }}>
-              বিজ্ঞপ্তি
-            </span>
-          </div>
-
-          <p style={{
-            fontSize: '13.5px',
-            color: 'rgba(255,255,255,0.82)',
-            margin: '0 0 14px',
-            lineHeight: 1.75,
-          }}>
-            ঈদুল আযহা উপলক্ষে আমাদের ডেলিভারি কার্যক্রম সাময়িকভাবে বন্ধ থাকবে।
-          </p>
-
-          {/* Date cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div style={{
-              background: 'rgba(220,20,20,0.16)',
-              border: '0.5px solid rgba(220,80,80,0.28)',
-              borderRadius: '12px',
-              padding: '12px 8px',
-              textAlign: 'center',
-            }}>
-              <p style={{ fontSize: '10px', color: 'rgba(255,160,160,0.75)', margin: '0 0 4px', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                বন্ধ থাকবে
-              </p>
-              <p style={{ fontSize: '16px', fontWeight: 800, color: '#ff9090', margin: 0, lineHeight: 1 }}>
-                ২৪ মে
-              </p>
-              <p style={{ fontSize: '11px', color: 'rgba(255,160,160,0.65)', margin: '4px 0 0' }}>
-                থেকে ২ জুন পর্যন্ত
-              </p>
-            </div>
-
-            <div style={{
-              background: 'rgba(20,180,100,0.16)',
-              border: '0.5px solid rgba(80,200,120,0.28)',
-              borderRadius: '12px',
-              padding: '12px 8px',
-              textAlign: 'center',
-            }}>
-              <p style={{ fontSize: '10px', color: 'rgba(100,225,155,0.75)', margin: '0 0 4px', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                আবার চলবে
-              </p>
-              <p style={{ fontSize: '16px', fontWeight: 800, color: '#6de8aa', margin: 0, lineHeight: 1 }}>
-                ৩ জুন
-              </p>
-              <p style={{ fontSize: '11px', color: 'rgba(100,225,155,0.65)', margin: '4px 0 0' }}>
-                থেকে স্বাভাবিক
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Dua text */}
-        <div style={{ textAlign: 'center', padding: '16px 24px 6px' }}>
-          <p style={{
-            fontSize: '13px',
-            color: 'rgba(255,255,255,0.55)',
-            margin: 0,
-            lineHeight: 1.8,
-            fontStyle: 'italic',
-          }}>
-            "আপনার ও আপনার পরিবারের জন্য<br />
-             দোয়া রইলো।"
-          </p>
-        </div>
-
-        {/* Bottom divider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 24px 12px' }}>
-          <div style={{ flex: 1, height: '0.5px', background: 'rgba(245,200,66,0.2)' }} />
-          <span style={{ color: 'rgba(245,200,66,0.45)', fontSize: '10px' }}>✦</span>
-          <div style={{ flex: 1, height: '0.5px', background: 'rgba(245,200,66,0.2)' }} />
-        </div>
-
-        {/* CTA Button */}
-        <div style={{ padding: '0 18px 20px' }}>
-          <button
-            onClick={onClose}
-            className="eid-cta-btn"
-            style={{
-              width: '100%',
-              padding: '13px',
-              background: 'linear-gradient(90deg, #8B6508, #f5c842, #d4920e, #f5c842, #8B6508)',
-              border: 'none',
-              borderRadius: '14px',
-              fontSize: '15px',
-              fontWeight: 800,
-              color: '#1a2e10',
-              cursor: 'pointer',
-              letterSpacing: '0.5px',
-              transition: 'opacity 0.2s, transform 0.15s',
-            }}
-          >
-            ঈদ মুবারক 🌙
-          </button>
-        </div>
-
-        {/* Bottom gold band */}
-        <div style={{
-          background: 'linear-gradient(90deg, #8B6508, #f5c842, #d4920e, #f5c842, #8B6508)',
-          height: '4px',
-          width: '100%',
-        }} />
-      </div>
     </div>
   );
 }
@@ -409,13 +115,13 @@ function HomePageContent() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showEidDialog, setShowEidDialog] = useState(() => {
-    return sessionStorage.getItem('eidDialogDismissed') !== 'true';
+  const [showAppDialog, setShowAppDialog] = useState(() => {
+    return sessionStorage.getItem('appDialogDismissed') !== 'true';
   });
 
-  const handleCloseEidDialog = () => {
-    sessionStorage.setItem('eidDialogDismissed', 'true');
-    setShowEidDialog(false);
+  const handleCloseDialog = () => {
+    sessionStorage.setItem('appDialogDismissed', 'true');
+    setShowAppDialog(false);
   };
 
   // --- Fetch Data ---
@@ -688,9 +394,104 @@ function HomePageContent() {
         </svg>
       </a>
 
-      {/* --- Eid ul Azha Banner Dialog --- */}
-      {showEidDialog && (
-        <EidBannerDialog onClose={handleCloseEidDialog} />
+      {/* --- App Download Dialog --- */}
+      {showAppDialog && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '16px',
+            padding: '28px 24px 24px',
+            width: '320px',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.25)',
+            position: 'relative',
+            textAlign: 'center',
+          }}>
+            <button
+              onClick={handleCloseDialog}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '20px',
+                color: '#6B7280',
+                lineHeight: 1,
+                padding: '4px',
+              }}
+            >
+              &#x2715;
+            </button>
+
+            <div style={{
+              width: '64px',
+              height: '64px',
+              backgroundColor: '#FFF7ED',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+              fontSize: '32px',
+            }}>
+              🍔
+            </div>
+
+            <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1F2937', margin: '0 0 8px' }}>
+              Get the Foodish App!
+            </h2>
+            <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 24px', lineHeight: '1.5' }}>
+              For a faster and smoother experience, download our Android app.
+            </p>
+
+            <a
+              href="https://play.google.com/store/apps/details?id=com.yumzy.userapp"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                backgroundColor: '#1F2937',
+                color: '#fff',
+                borderRadius: '10px',
+                padding: '12px 20px',
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: '15px',
+                marginBottom: '12px',
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
+                <path d="M3.18 23.76a2 2 0 001.94-.21l11.34-6.55-2.9-2.9-10.38 9.66zM.54 1.1A2 2 0 000 2.54v18.92a2 2 0 00.54 1.44l.08.07 10.59-10.59v-.25L.62 1.03l-.08.07zM20.3 10.4l-2.88-1.66-3.24 3.24 3.24 3.24 2.9-1.68a2.02 2.02 0 000-3.14zM5.12.45L16.46 7 13.56 9.9 3.18.45A2 2 0 005.12.45z" />
+              </svg>
+              Download on Google Play
+            </a>
+
+            <button
+              onClick={handleCloseDialog}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#9CA3AF',
+                fontSize: '13px',
+              }}
+            >
+              Continue on Web
+            </button>
+          </div>
+        </div>
       )}
 
     </div>
