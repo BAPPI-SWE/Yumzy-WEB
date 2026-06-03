@@ -213,6 +213,7 @@ function HomePageContent() {
           type: 'MAIN',
           priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
           open: 'yes',
+          parentCategory: doc.data().parentCategory || '',
           _fetchIndex: idx,
         }));
 
@@ -224,16 +225,19 @@ function HomePageContent() {
           type: 'MINI',
           priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
           open: doc.data().open || 'no',
+          parentCategory: doc.data().parentCategory || '',
           _fetchIndex: idx + 10000, // offset so MAIN and MINI indices don't collide
         }));
 
         // Sort by priority ascending (nulls last), then by original fetch order for stability
-        const combined = [...mainRestaurants, ...miniRestaurants].sort((a, b) => {
-          const pa = a.priority != null ? a.priority : Number.MAX_SAFE_INTEGER;
-          const pb = b.priority != null ? b.priority : Number.MAX_SAFE_INTEGER;
-          if (pa !== pb) return pa - pb;
-          return a._fetchIndex - b._fetchIndex; // stable: preserve Firestore fetch order on tie
-        });
+        const combined = [...mainRestaurants, ...miniRestaurants]
+          .filter((r) => (r.parentCategory || '').toLowerCase() !== 'grocery')
+          .sort((a, b) => {
+            const pa = a.priority != null ? a.priority : Number.MAX_SAFE_INTEGER;
+            const pb = b.priority != null ? b.priority : Number.MAX_SAFE_INTEGER;
+            if (pa !== pb) return pa - pb;
+            return a._fetchIndex - b._fetchIndex; // stable: preserve Firestore fetch order on tie
+          });
 
         setCombinedRestaurants(combined);
         setAllMiniRestaurants(miniRestaurants);
