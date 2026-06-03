@@ -1,34 +1,30 @@
 import { useState } from 'react';
-import { BuildingStorefrontIcon, TagIcon, NoSymbolIcon } from '@heroicons/react/24/solid';
+import { BuildingStorefrontIcon, TagIcon, NoSymbolIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
-// Simplified Card for displaying search results
 const SearchResultCard = ({ type, data, onClick }) => {
   const [isHovered, setIsHovered] = useState(false);
-  
-  let title = '';
-  let subtitle = '';
-  let imageUrl = null;
-  let Icon = TagIcon;
-  let isOpen = true;
+
+  let title = '', subtitle = '', imageUrl = null, isOpen = true;
+  let accentColor = '#DC0C25';
 
   switch (type) {
     case 'restaurant':
       title = data.name;
       subtitle = data.cuisine;
       imageUrl = data.imageUrl;
-      Icon = BuildingStorefrontIcon;
+      accentColor = data.type === 'MINI' ? '#1D4ED8' : '#DC0C25';
       break;
     case 'subCategory':
       title = data.name;
-      subtitle = `${data.itemCount} items`;
+      subtitle = `${data.itemCount} items available`;
       imageUrl = data.imageUrl;
-      Icon = TagIcon;
+      accentColor = '#7C3AED';
       break;
     case 'miniRestaurant':
       title = data.name;
-      subtitle = 'Shop';
+      subtitle = 'Mini Shop';
       imageUrl = data.imageUrl;
-      Icon = BuildingStorefrontIcon;
+      accentColor = '#1D4ED8';
       isOpen = data.open === 'yes';
       break;
   }
@@ -43,122 +39,134 @@ const SearchResultCard = ({ type, data, onClick }) => {
         width: '100%',
         display: 'flex',
         alignItems: 'center',
-        padding: '12px',
-        gap: '16px',
+        padding: '10px 16px',
+        gap: '14px',
         textAlign: 'left',
-        backgroundColor: isHovered && isOpen ? '#F3F4F6' : 'transparent',
-        transition: 'background-color 0.2s',
-        borderBottom: '1px solid #F3F4F6',
-        borderRadius: '8px',
-        opacity: !isOpen ? 0.6 : 1,
+        backgroundColor: isHovered && isOpen ? '#F8FAFC' : 'transparent',
+        transition: 'background 0.15s',
+        opacity: isOpen ? 1 : 0.55,
         cursor: isOpen ? 'pointer' : 'not-allowed',
-        border: 'none'
+        border: 'none',
+        borderBottom: '1px solid #F1F5F9',
       }}
     >
+      {/* Thumbnail */}
       {imageUrl ? (
         <img
           src={imageUrl}
           alt={title}
           style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '8px',
-            objectFit: 'cover',
-            flexShrink: 0,
-            backgroundColor: '#E5E7EB'
+            width: '44px', height: '44px', borderRadius: '10px',
+            objectFit: 'cover', flexShrink: 0, backgroundColor: '#F3F4F6',
           }}
         />
       ) : (
         <div style={{
-          width: '48px',
-          height: '48px',
-          borderRadius: '8px',
-          backgroundColor: '#E5E7EB',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0
+          width: '44px', height: '44px', borderRadius: '10px',
+          backgroundColor: accentColor + '15',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
-          <Icon style={{ width: '24px', height: '24px', color: '#9CA3AF' }} />
+          {type === 'subCategory'
+            ? <TagIcon style={{ width: '20px', height: '20px', color: accentColor }} />
+            : <BuildingStorefrontIcon style={{ width: '20px', height: '20px', color: accentColor }} />
+          }
         </div>
       )}
-      <div style={{
-        flex: 1,
-        minWidth: 0
-      }}>
+
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
-          fontWeight: 600,
-          color: '#1F2937',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
+          fontWeight: 600, fontSize: '14px', color: '#1F2937', margin: 0,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {title}
         </p>
-        <p style={{
-          fontSize: '12px',
-          color: '#6B7280',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
-        }}>
-          {subtitle}
-        </p>
-        {!isOpen && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            fontSize: '12px',
-            color: '#EF4444',
-            fontWeight: 500,
-            marginTop: '2px'
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+          <p style={{
+            fontSize: '12px', color: '#6B7280', margin: 0,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
-            <NoSymbolIcon style={{ width: '12px', height: '12px', marginRight: '4px' }} />
-            <span>Closed</span>
-          </div>
-        )}
+            {subtitle}
+          </p>
+          {!isOpen && (
+            <span style={{
+              display: 'flex', alignItems: 'center', gap: '3px',
+              fontSize: '11px', color: '#DC2626', fontWeight: 600,
+              backgroundColor: '#FEF2F2', padding: '1px 6px', borderRadius: '4px',
+              flexShrink: 0,
+            }}>
+              <NoSymbolIcon style={{ width: '10px', height: '10px' }} />
+              Closed
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Type pill */}
+      <div style={{
+        fontSize: '11px', fontWeight: 600,
+        color: accentColor,
+        backgroundColor: accentColor + '15',
+        padding: '3px 8px', borderRadius: '6px', flexShrink: 0,
+      }}>
+        {type === 'subCategory' ? 'Category' : data.type === 'MINI' ? 'Shop' : 'Restaurant'}
       </div>
     </button>
   );
 };
 
 export default function SearchResultsList({
-  results,
-  onRestaurantClick,
-  onSubCategoryClick,
-  onMiniRestaurantClick,
+  results, onRestaurantClick, onSubCategoryClick, onMiniRestaurantClick,
 }) {
   if (results === null) return null;
 
   return (
     <div style={{
       position: 'absolute',
-      top: '110px',
-      left: 0,
-      right: 0,
-      bottom: 0,
+      top: '110px', /* mobile header height */
+      left: 0, right: 0, bottom: 0,
       backgroundColor: 'white',
-      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
       overflowY: 'auto',
-      zIndex: 30
+      zIndex: 200,
+      borderTop: '1px solid #F1F5F9',
     }}>
-      <div style={{
-        padding: '8px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px'
-      }}>
-        {results.length === 0 ? (
-          <p style={{
-            color: '#6B7280',
-            textAlign: 'center',
-            paddingTop: '40px',
-            paddingBottom: '40px'
+      {/* Desktop: constrain width to content area */}
+      <style>{`
+        @media (min-width: 1024px) {
+          .search-results-inner {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 8px 0 !important;
+          }
+        }
+      `}</style>
+
+      {results.length === 0 ? (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', padding: '60px 20px', gap: '12px',
+        }}>
+          <div style={{
+            width: '56px', height: '56px', borderRadius: '16px',
+            backgroundColor: '#F3F4F6',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            No results found.
+            <MagnifyingGlassIcon style={{ width: '28px', height: '28px', color: '#9CA3AF' }} />
+          </div>
+          <p style={{ color: '#6B7280', fontSize: '15px', margin: 0 }}>No results found</p>
+          <p style={{ color: '#9CA3AF', fontSize: '13px', margin: 0 }}>Try a different search term</p>
+        </div>
+      ) : (
+        <div className="search-results-inner" style={{ padding: '8px 0' }}>
+          {/* Section header */}
+          <p style={{
+            fontSize: '11px', fontWeight: 700, color: '#9CA3AF',
+            letterSpacing: '0.8px', textTransform: 'uppercase',
+            padding: '8px 16px 4px',
+          }}>
+            {results.length} result{results.length !== 1 ? 's' : ''}
           </p>
-        ) : (
-          results.map((result, index) => (
+          {results.map((result, index) => (
             <SearchResultCard
               key={`${result.type}-${result.data.id || result.data.ownerId || index}`}
               type={result.type}
@@ -169,17 +177,13 @@ export default function SearchResultsList({
                 } else if (result.type === 'subCategory') {
                   onSubCategoryClick(result.data.name);
                 } else if (result.type === 'miniRestaurant') {
-                  onMiniRestaurantClick(
-                    result.data.id,
-                    result.data.name,
-                    result.data.open === 'yes'
-                  );
+                  onMiniRestaurantClick(result.data.id, result.data.name, result.data.open === 'yes');
                 }
               }}
             />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

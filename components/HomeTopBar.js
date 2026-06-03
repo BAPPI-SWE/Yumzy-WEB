@@ -1,237 +1,230 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MapPinIcon, BellIcon, HeartIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
-// Search Bar Component
-const SearchBar = ({ query, onQueryChange, onFocusChange }) => {
+const SearchBar = ({ query, onQueryChange, onFocusChange, isDesktop }) => {
   const [isFocused, setIsFocused] = useState(false);
 
-  const handleClear = () => {
-    onQueryChange('');
-  };
-
-  const handleFocus = () => {
-    setIsFocused(true);
-    onFocusChange(true);
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-    onFocusChange(false);
-  };
-
   return (
-    <div style={{ 
-      position: 'relative', 
-      width: '100%',
-      maxWidth: '100%' // Added constraint
-    }}>
+    <div style={{ position: 'relative', width: '100%' }}>
       <div style={{
-        position: 'absolute',
-        top: 0,
-        bottom: 0,
-        left: 0,
-        paddingLeft: '16px',
-        display: 'flex',
-        alignItems: 'center',
-        pointerEvents: 'none',
-        zIndex: 1
+        position: 'absolute', top: 0, bottom: 0, left: 0,
+        paddingLeft: '14px', display: 'flex', alignItems: 'center',
+        pointerEvents: 'none', zIndex: 1
       }}>
-        <MagnifyingGlassIcon style={{ height: '20px', width: '20px', color: '#6B7280' }} />
+        <MagnifyingGlassIcon style={{ height: '18px', width: '18px', color: isFocused ? '#DC0C25' : '#9CA3AF' }} />
       </div>
       <input
         type="text"
-        placeholder="Search Restaurants or Foods..."
+        placeholder="Search restaurants, foods, shops..."
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
+        onFocus={() => { setIsFocused(true); onFocusChange(true); }}
+        onBlur={() => { setIsFocused(false); onFocusChange(false); }}
         style={{
           width: '100%',
-          maxWidth: '100%', // Added constraint
-          height: '44px',
-          paddingLeft: '44px',
+          height: isDesktop ? '42px' : '44px',
+          paddingLeft: '40px',
           paddingRight: query ? '40px' : '16px',
-          paddingTop: '8px',
-          paddingBottom: '8px',
           fontSize: '14px',
-          backgroundColor: 'white',
-          borderRadius: '9999px',
-          border: isFocused ? '2px solid #DC0C25' : '1px solid #E5E7EB',
+          backgroundColor: isDesktop ? '#F9FAFB' : 'white',
+          borderRadius: '10px',
+          border: isFocused ? '1.5px solid #DC0C25' : `1.5px solid ${isDesktop ? '#E5E7EB' : 'transparent'}`,
           outline: 'none',
-          boxShadow: isFocused ? '0 0 0 3px rgba(220, 12, 37, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          boxShadow: isFocused ? '0 0 0 3px rgba(220,12,37,0.08)' : 'none',
           transition: 'all 0.2s',
-          boxSizing: 'border-box' // Added to include padding in width calculation
+          boxSizing: 'border-box',
+          color: '#1F2937',
         }}
       />
       {query && (
         <button
-          onClick={handleClear}
+          onClick={() => onQueryChange('')}
           style={{
-            position: 'absolute',
-            top: '50%',
-            right: '12px',
-            transform: 'translateY(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '4px',
-            zIndex: 2
+            position: 'absolute', top: '50%', right: '10px',
+            transform: 'translateY(-50%)', background: 'none', border: 'none',
+            cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center',
           }}
         >
-          <XMarkIcon style={{ height: '20px', width: '20px', color: '#6B7280' }} />
+          <XMarkIcon style={{ height: '16px', width: '16px', color: '#9CA3AF' }} />
         </button>
       )}
     </div>
   );
 };
 
-// Main Top Bar Component
 export default function HomeTopBar({
-  userProfile,
-  searchQuery,
-  onSearchQueryChange,
-  onNotificationClick,
-  onFavoriteClick
+  userProfile, searchQuery, onSearchQueryChange,
+  onNotificationClick, onFavoriteClick
 }) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   return (
-    <div style={{
-      position: 'sticky',
-      top: 0,
-      zIndex: 40,
-      background: 'linear-gradient(to bottom, #DC0C25, #B70314)',
-      color: 'white',
-      borderBottomLeftRadius: '20px',
-      borderBottomRightRadius: '20px',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-      width: '100%',
-      maxWidth: '100%', // Added constraint
-      boxSizing: 'border-box' // Added
-    }}>
-      <div style={{
-        paddingLeft: '16px',
-        paddingRight: '16px',
-        paddingTop: '16px',
-        paddingBottom: '12px',
-        width: '100%',
-        maxWidth: '100%', // Added constraint
-        boxSizing: 'border-box' // Added
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Keania+One&display=swap');
+        .foodish-desktop-header { display: none; }
+        .foodish-mobile-header { display: flex; }
+        @media (min-width: 1024px) {
+          .foodish-desktop-header { display: flex; }
+          .foodish-mobile-header { display: none; }
+        }
+      `}</style>
+
+      {/* ── DESKTOP HEADER ── */}
+      <header className="foodish-desktop-header" style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        backgroundColor: 'white',
+        borderBottom: '1px solid #F1F5F9',
+        alignItems: 'center',
+        padding: '0 40px',
+        height: '68px',
+        gap: '32px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
       }}>
-        {/* Location and Icons Row */}
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <span style={{
+            fontFamily: "'Keania One', cursive",
+            fontSize: '26px',
+            color: '#DC0C25',
+            letterSpacing: '1px',
+            lineHeight: 1,
+          }}>
+            FOODISH
+          </span>
+        </div>
+
+        {/* Location pill */}
         <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          height: '40px',
-          marginBottom: '12px',
-          width: '100%',
-          maxWidth: '100%', // Added constraint
-          gap: '8px' // Added gap for better spacing
+          display: 'flex', alignItems: 'center', gap: '6px',
+          backgroundColor: '#FEF2F2', borderRadius: '8px',
+          padding: '6px 14px', flexShrink: 0,
+          border: '1px solid #FECDD3',
         }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            minWidth: 0,
-            flex: 1,
-            overflow: 'hidden' // Added to prevent overflow
-          }}>
-            <MapPinIcon style={{
-              width: '20px',
-              height: '20px',
-              marginRight: '6px',
-              flexShrink: 0
-            }} />
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              minWidth: 0,
-              flex: 1,
-              overflow: 'hidden' // Added
-            }}>
-              <span style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {userProfile?.baseLocation || '...'}
+          <MapPinIcon style={{ width: '16px', height: '16px', color: '#DC0C25', flexShrink: 0 }} />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '11px', color: '#DC0C25', fontWeight: 600, lineHeight: 1.2 }}>
+              {userProfile?.baseLocation || 'Loading...'}
+            </span>
+            {userProfile?.subLocation && (
+              <span style={{ fontSize: '12px', color: '#374151', fontWeight: 600, lineHeight: 1.2 }}>
+                {userProfile.subLocation}
               </span>
-              {userProfile?.subLocation && (
-                <span style={{
-                  fontSize: '12px',
-                  color: 'rgba(255, 255, 255, 0.9)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {userProfile.subLocation}
-                </span>
-              )}
-            </div>
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            flexShrink: 0 // Prevent icons from shrinking
-          }}>
-            <button
-              onClick={onFavoriteClick}
-              style={{
-                padding: '8px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                borderRadius: '9999px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              <HeartIcon style={{ width: '20px', height: '20px', color: 'white' }} />
-            </button>
-            <button
-              onClick={onNotificationClick}
-              style={{
-                padding: '8px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                borderRadius: '9999px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              <BellIcon style={{ width: '24px', height: '24px', color: 'white' }} />
-            </button>
+            )}
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div style={{
-          width: '100%',
-          maxWidth: '100%', // Added constraint
-          boxSizing: 'border-box' // Added
-        }}>
+        {/* Search */}
+        <div style={{ flex: 1, maxWidth: '520px' }}>
           <SearchBar
             query={searchQuery}
             onQueryChange={onSearchQueryChange}
             onFocusChange={setIsSearchFocused}
+            isDesktop={true}
           />
         </div>
-      </div>
-    </div>
+
+        {/* Right actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+          <IconBtn onClick={onFavoriteClick} label="Favorites">
+            <HeartIcon style={{ width: '20px', height: '20px', color: '#6B7280' }} />
+          </IconBtn>
+          <IconBtn onClick={onNotificationClick} label="Orders & Notifications">
+            <BellIcon style={{ width: '20px', height: '20px', color: '#6B7280' }} />
+          </IconBtn>
+        </div>
+      </header>
+
+      {/* ── MOBILE HEADER ── */}
+      <header className="foodish-mobile-header" style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'linear-gradient(160deg, #DC0C25 0%, #B70314 100%)',
+        flexDirection: 'column',
+        borderBottomLeftRadius: '22px',
+        borderBottomRightRadius: '22px',
+        boxShadow: '0 4px 20px rgba(220,12,37,0.3)',
+        overflow: 'hidden',
+      }}>
+        {/* Top row */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 16px 10px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+            <div style={{
+              width: '32px', height: '32px', borderRadius: '8px',
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <MapPinIcon style={{ width: '18px', height: '18px', color: 'white' }} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)', margin: 0, fontWeight: 500 }}>
+                Delivering to
+              </p>
+              <p style={{
+                fontSize: '14px', color: 'white', margin: 0, fontWeight: 700,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {userProfile?.subLocation || userProfile?.baseLocation || '...'}
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+            <MobileIconBtn onClick={onFavoriteClick}>
+              <HeartIcon style={{ width: '20px', height: '20px', color: 'white' }} />
+            </MobileIconBtn>
+            <MobileIconBtn onClick={onNotificationClick}>
+              <BellIcon style={{ width: '20px', height: '20px', color: 'white' }} />
+            </MobileIconBtn>
+          </div>
+        </div>
+        {/* Search row */}
+        <div style={{ padding: '0 16px 16px' }}>
+          <SearchBar
+            query={searchQuery}
+            onQueryChange={onSearchQueryChange}
+            onFocusChange={setIsSearchFocused}
+            isDesktop={false}
+          />
+        </div>
+      </header>
+    </>
+  );
+}
+
+function IconBtn({ onClick, label, children }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '8px', backgroundColor: hovered ? '#F9FAFB' : 'transparent',
+        border: 'none', borderRadius: '8px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'background 0.15s',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function MobileIconBtn({ onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '8px', backgroundColor: 'rgba(255,255,255,0.15)',
+        border: 'none', borderRadius: '8px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      {children}
+    </button>
   );
 }
