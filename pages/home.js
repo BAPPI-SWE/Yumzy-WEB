@@ -104,10 +104,10 @@ function SectionHeader({ title, count }) {
 // --- Stats strip (desktop only) ---
 function StatsStrip() {
   const stats = [
-    { icon: '🚀', label: 'Fast Delivery', value: '30–40 min avg' },
+    { icon: '🚀', label: 'Fast Delivery', value: '20–40 min avg' },
     { icon: '🍽️', label: 'Restaurants', value: '50+ options' },
     { icon: '⭐', label: 'Rating', value: '4.8 / 5.0' },
-    { icon: '🎁', label: 'Safe Delivery', value: 'On all orders' },
+    { icon: '🎁', label: 'Free Delivery', value: 'On all orders' },
   ];
   return (
     <div style={{
@@ -204,7 +204,8 @@ function HomePageContent() {
         }));
         setOffers(fetchedOffers);
 
-        const mainRestaurants = restaurantsSnap.docs.map((doc) => ({
+        // Store fetch index so equal-priority items keep their original Firestore order
+        const mainRestaurants = restaurantsSnap.docs.map((doc, idx) => ({
           id: doc.id,
           name: doc.data().name || 'No Name',
           cuisine: doc.data().cuisine || 'General',
@@ -212,9 +213,10 @@ function HomePageContent() {
           type: 'MAIN',
           priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
           open: 'yes',
+          _fetchIndex: idx,
         }));
 
-        const miniRestaurants = miniRestaurantsSnap.docs.map((doc) => ({
+        const miniRestaurants = miniRestaurantsSnap.docs.map((doc, idx) => ({
           id: doc.id,
           name: doc.data().name || 'No Name',
           cuisine: doc.data().cuisine || 'Shop',
@@ -222,12 +224,15 @@ function HomePageContent() {
           type: 'MINI',
           priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
           open: doc.data().open || 'no',
+          _fetchIndex: idx + 10000, // offset so MAIN and MINI indices don't collide
         }));
 
+        // Sort by priority ascending (nulls last), then by original fetch order for stability
         const combined = [...mainRestaurants, ...miniRestaurants].sort((a, b) => {
           const pa = a.priority != null ? a.priority : Number.MAX_SAFE_INTEGER;
           const pb = b.priority != null ? b.priority : Number.MAX_SAFE_INTEGER;
-          return pa - pb;
+          if (pa !== pb) return pa - pb;
+          return a._fetchIndex - b._fetchIndex; // stable: preserve Firestore fetch order on tie
         });
 
         setCombinedRestaurants(combined);
@@ -485,7 +490,7 @@ function HomePageContent() {
 
                     {/* Quick stat pills */}
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {[['🚀', '30–40 min'], ['🍽️', '50+ outlets'], ['🎁', 'Safe delivery']].map(([icon, label]) => (
+                      {[['🚀', '20–40 min'], ['🍽️', '50+ outlets'], ['🎁', 'Free delivery']].map(([icon, label]) => (
                         <div key={label} style={{
                           display: 'flex', alignItems: 'center', gap: '5px',
                           backgroundColor: 'rgba(255,255,255,0.18)',
