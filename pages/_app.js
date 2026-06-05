@@ -29,7 +29,13 @@ function MyApp({ Component, pageProps }) {
       <Head>
         <meta name="google-site-verification" content="o_ZP7Gh228bnvaAsyMyjC4LDXViRYDT5ic31HO4qgOM" />
         <title>Foodish BD - Daffodil Smart City's Food & Grocery Solution</title>
-        <meta name="description" content="Foodish lets Daffodil Smart City residents order food and groceries quickly and conveniently." />
+        <meta name="description" content="Foodish BD lets Daffodil Smart City residents order food and groceries quickly and conveniently." />
+
+        {/* Favicon — place favicon.ico and favicon.png inside your /public folder */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
+        <meta name="theme-color" content="#DC0C25" />
       </Head>
       <AuthProvider>
         <CartProvider>
