@@ -11,7 +11,7 @@ import dynamic from 'next/dynamic';
 const Lottie = dynamic(() => import('react-lottie-player'), { ssr: false });
 import splashAnimation from '../public/splash_animation.json';
 
-const SPLASH_SEEN_KEY  = 'foodishSplashSeen';
+const SPLASH_SEEN_KEY = 'foodishSplashSeen';
 const SPLASH_DURATION  = 2800; // ms — how long to show the splash
 
 // ─── Desktop Splash ───────────────────────────────────────────────
@@ -191,14 +191,14 @@ export default function IndexPage() {
   };
 
   useEffect(() => {
-    const hasSeenSplash = localStorage.getItem(SPLASH_SEEN_KEY) === 'true';
+    const hasSeenSplash = sessionStorage.getItem(SPLASH_SEEN_KEY) === 'true';
 
     if (hasSeenSplash) {
       // Returning user — skip splash, go straight to redirect
       setPhase('redirect');
     } else {
       // First visit ever — show splash, mark seen
-      localStorage.setItem(SPLASH_SEEN_KEY, 'true');
+      sessionStorage.setItem(SPLASH_SEEN_KEY, 'true');
       setPhase('splash');
 
       const timer = setTimeout(() => {
