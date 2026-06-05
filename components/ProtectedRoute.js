@@ -1,7 +1,7 @@
+// ProtectedRoute.js
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
-import LoadingSpinner from './LoadingSpinner';
 
 export default function ProtectedRoute({ children }) {
   const { user, profileExists, loading } = useAuth();
@@ -17,8 +17,37 @@ export default function ProtectedRoute({ children }) {
     }
   }, [user, profileExists, loading, router]);
 
-  if (loading || !user || !profileExists) {
-    return <LoadingSpinner />;
+  // Auth is still resolving — show a minimal centered spinner, not the splash screen
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        backgroundColor: '#F8FAFC',
+        gap: '16px',
+      }}>
+        <div style={{
+          width: '44px',
+          height: '44px',
+          border: '3px solid #F1F5F9',
+          borderTop: '3px solid #DC0C25',
+          borderRadius: '50%',
+          animation: 'spin 0.75s linear infinite',
+        }} />
+        <style>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Auth resolved but user/profile not ready yet — render nothing while
+  // the useEffect above redirects. Avoids flash of protected content.
+  if (!user || !profileExists) {
+    return null;
   }
 
   return children;
