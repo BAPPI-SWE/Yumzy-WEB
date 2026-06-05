@@ -82,7 +82,12 @@ export default function HomeTopBar({
         boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
       }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          <img
+            src="/favicon.png"
+            alt="Foodish logo"
+            style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+          />
           <span style={{
             fontFamily: "'Keania One', cursive",
             fontSize: '26px',
