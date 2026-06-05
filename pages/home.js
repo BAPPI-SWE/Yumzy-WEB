@@ -104,10 +104,10 @@ function SectionHeader({ title, count }) {
 // --- Stats strip (desktop only) ---
 function StatsStrip() {
   const stats = [
-    { icon: '🚀', label: 'Fast Delivery', value: '20–40 min avg' },
+    { icon: '🚀', label: 'Fast Delivery', value: '30–40 min avg' },
     { icon: '🍽️', label: 'Restaurants', value: '50+ options' },
     { icon: '⭐', label: 'Rating', value: '4.8 / 5.0' },
-    { icon: '🎁', label: 'Free Delivery', value: 'On all orders' },
+    { icon: '🎁', label: 'Safe Delivery', value: 'On all orders' },
   ];
   return (
     <div style={{
@@ -494,7 +494,7 @@ function HomePageContent() {
 
                     {/* Quick stat pills */}
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {[['🚀', '20–40 min'], ['🍽️', '50+ outlets'], ['🎁', 'Free delivery']].map(([icon, label]) => (
+                      {[['🚀', '30–40 min'], ['🍽️', '50+ outlets'], ['🎁', 'Safe delivery']].map(([icon, label]) => (
                         <div key={label} style={{
                           display: 'flex', alignItems: 'center', gap: '5px',
                           backgroundColor: 'rgba(255,255,255,0.18)',
