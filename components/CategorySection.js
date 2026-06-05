@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 const categories = [
   { id: 'fast_food',     name: 'Fast Food',    Icon: BuildingStorefrontIcon, color: '#DC0C25', bg: '#FEF2F2' },
-  { id: 'pharmacy',      name: 'Rice & Curry', Icon: InboxIcon,              color: '#7C3AED', bg: '#F5F3FF' },
+  { id: 'pharmacy',      name: 'Rice Item', Icon: InboxIcon,              color: '#7C3AED', bg: '#F5F3FF' },
   { id: 'personal_care', name: 'City Food',    Icon: GiftIcon,               color: '#0284C7', bg: '#F0F9FF' },
   { id: 'grocery',       name: 'Grocery',      Icon: ShoppingCartIcon,       color: '#16A34A', bg: '#F0FDF4' },
 ];
