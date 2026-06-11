@@ -21,6 +21,9 @@ export default function RestaurantCard({ restaurant, onClick }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isFavHovered, setIsFavHovered] = useState(false);
 
+  const isPersonalCare = (restaurant.parentCategory || '').toLowerCase() === 'personal_care';
+  const isClosed = restaurant.type === 'MINI' && restaurant.open !== 'yes';
+
   return (
     <div
       onClick={onClick}
@@ -48,6 +51,34 @@ export default function RestaurantCard({ restaurant, onClick }) {
           background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)',
         }} />
 
+        {/* "Pre Order Only" tag — top-left, only for open personal_care restaurants */}
+        {isPersonalCare && !isClosed && (
+          <div style={{
+            position: 'absolute',
+            top: '10px',
+            left: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            background: 'linear-gradient(90deg, #FF6F91, #FF3CAC)',
+            borderRadius: '20px',
+            padding: '5px 10px',
+            boxShadow: '0 4px 8px rgba(255,60,172,0.35)',
+            zIndex: 2,
+          }}>
+            <ClockIcon style={{ width: '13px', height: '13px', color: 'white', flexShrink: 0 }} />
+            <span style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              color: 'white',
+              letterSpacing: '0.3px',
+              whiteSpace: 'nowrap',
+            }}>
+              Pre Order Only
+            </span>
+          </div>
+        )}
+
         {/* Favourite button */}
         <button
           onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
@@ -62,6 +93,7 @@ export default function RestaurantCard({ restaurant, onClick }) {
             boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
             border: 'none', cursor: 'pointer',
             transition: 'background-color 0.2s',
+            zIndex: 2,
           }}
         >
           {isFavorite
