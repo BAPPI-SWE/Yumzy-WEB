@@ -3,9 +3,9 @@ import { useRouter } from 'next/router';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
-import { collection, query, where, orderBy, getDocs, Timestamp, onSnapshot } from 'firebase/firestore'; // Import onSnapshot
+import { collection, query, where, orderBy, getDocs, doc, getDoc, Timestamp, onSnapshot } from 'firebase/firestore';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { InformationCircleIcon, MapPinIcon, ShoppingBagIcon, ClockIcon, ArrowRightIcon, XMarkIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
+import { InformationCircleIcon, MapPinIcon, ShoppingBagIcon, ClockIcon, ArrowRightIcon, XMarkIcon, BuildingStorefrontIcon, UserIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 
 // --- Helper Functions ---
 const formatTimestamp = (timestamp) => {
@@ -41,7 +41,7 @@ const getStatusColor = (status = '') => {
 };
 
 // --- Order Card ---
-const OrderCard = ({ order, onClick }) => {
+const OrderCard = ({ order, userPhoneLastFour, onClick }) => {
   const statusColors = getStatusColor(order.orderStatus);
   const itemCountText = order.items.length === 1 ? '1 item' : `${order.items.length} items`;
 
@@ -91,7 +91,7 @@ const OrderCard = ({ order, onClick }) => {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
-            }}>{cardTitle}</span> {/* Use cardTitle here */}
+            }}>{cardTitle}</span>
           </div>
           <span style={{
             padding: '2px 10px',
@@ -104,6 +104,20 @@ const OrderCard = ({ order, onClick }) => {
             {order.orderStatus}
           </span>
         </div>
+
+        {/* User ID Row */}
+        {userPhoneLastFour && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '11px',
+            color: '#9CA3AF'
+          }}>
+            <UserIcon style={{ width: '13px', height: '13px' }} />
+            <span>User ID: ****{userPhoneLastFour}</span>
+          </div>
+        )}
 
         {/* Info Row */}
         <div style={{
@@ -171,13 +185,8 @@ const OrderCard = ({ order, onClick }) => {
   );
 };
 
-// --- Order Details Modal ---
-const OrderDetailsModal = ({ order, onClose }) => {
-  if (!order) return null;
-  const itemsSubtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-  const cardTitle = order.restaurantId === 'yumzy_store' ? 'Foodish Store' : order.restaurantName;
-
+// --- Cancel Confirmation Dialog ---
+const CancelConfirmDialog = ({ onConfirm, onCancel }) => {
   return (
     <div style={{
       position: 'fixed',
@@ -186,180 +195,309 @@ const OrderDetailsModal = ({ order, onClose }) => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 100,
-      padding: '16px',
-      backdropFilter: 'blur(4px)'
+      zIndex: 110,
+      padding: '16px'
     }}>
       <div style={{
         backgroundColor: 'white',
         borderRadius: '12px',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
         width: '100%',
-        maxWidth: '448px',
-        maxHeight: '90vh',
-        display: 'flex',
-        flexDirection: 'column'
+        maxWidth: '380px',
+        padding: '20px'
       }}>
-        {/* Header */}
-        <div style={{
-          padding: '16px',
-          borderBottom: '1px solid #E5E7EB',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <h2 style={{
-            fontSize: '18px',
-            fontWeight: 700,
-            color: '#1F2937'
-          }}>Order Summary</h2>
+        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1F2937', marginBottom: '8px' }}>
+          Cancel Order?
+        </h3>
+        <p style={{ fontSize: '14px', color: '#4B5563', marginBottom: '20px' }}>
+          You&apos;ll be redirected to our WhatsApp helpline to complete your cancellation request.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button
-            onClick={onClose}
-            style={{
-              padding: '4px',
-              borderRadius: '9999px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            <XMarkIcon style={{ width: '20px', height: '20px', color: '#6B7280' }} />
-          </button>
-        </div>
-
-        {/* Scrollable Content */}
-        <div style={{
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-          overflowY: 'auto'
-        }}>
-          {/* Use cardTitle here */}
-          <p style={{ fontWeight: 600, color: '#1F2937' }}>{cardTitle}</p>
-          <p style={{ fontSize: '12px', color: '#6B7280' }}>Ordered on {formatTimestamp(order.createdAt)}</p>
-          <p style={{
-            fontSize: '14px',
-            fontWeight: 600,
-            color: getStatusColor(order.orderStatus).text
-          }}>
-            Status: {order.orderStatus}
-          </p>
-
-          <h3 style={{
-            fontSize: '14px',
-            fontWeight: 700,
-            paddingTop: '8px'
-          }}>Items:</h3>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '6px',
-            fontSize: '14px'
-          }}>
-            {order.items.map((item, index) => (
-              <div key={index} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start'
-              }}>
-                <div style={{ flex: 1, marginRight: '8px' }}>
-                  <span style={{ color: '#374151' }}>{item.quantity} x {item.name}</span>
-                  
-                  {/* --- MODIFICATION START --- */}
-                  {/* Only show if miniResName exists AND it's not the default fallback */}
-                  {item.miniResName && item.miniResName !== 'Yumzy Store' && (
-                    <span style={{
-                      display: 'block',
-                      fontSize: '12px',
-                      color: '#6B7280',
-                      marginLeft: '16px' // This indent helps
-                    }}>from {item.miniResName}</span>
-                  )}
-                  {/* --- MODIFICATION END --- */}
-                  
-                </div>
-                <span style={{
-                  fontWeight: 500,
-                  color: '#1F2937',
-                  whiteSpace: 'nowrap'
-                }}>৳{(item.price * item.quantity).toFixed(0)}</span>
-              </div>
-            ))}
-          </div>
-
-          <hr style={{ margin: '8px 0', borderColor: '#E5E7EB' }} />
-
-          {/* Price Details */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            fontSize: '14px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#4B5563' }}>Items Subtotal</span>
-              <span style={{ fontWeight: 500 }}>৳{itemsSubtotal.toFixed(0)}</span>
-            </div>
-            {order.deliveryCharge > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#4B5563' }}>Delivery Charge</span>
-                <span style={{ fontWeight: 500 }}>৳{order.deliveryCharge.toFixed(0)}</span>
-              </div>
-            )}
-            {order.serviceCharge > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#4B5563' }}>Service Charge</span>
-                <span style={{ fontWeight: 500 }}>৳{order.serviceCharge.toFixed(0)}</span>
-              </div>
-            )}
-            <hr style={{ margin: '4px 0', borderColor: '#E5E7EB' }} />
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontWeight: 700,
-              fontSize: '16px',
-              color: '#D50032'
-            }}>
-              <span>Total Payable</span>
-              <span>৳{order.totalPrice.toFixed(0)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Close Button Footer */}
-        <div style={{
-          padding: '16px',
-          borderTop: '1px solid #E5E7EB'
-        }}>
-          <button
-            onClick={onClose}
+            onClick={onConfirm}
             style={{
               width: '100%',
-              height: '45px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#B70314',
+              height: '42px',
+              backgroundColor: '#EF4444',
               color: 'white',
+              border: 'none',
               borderRadius: '8px',
               fontSize: '14px',
               fontWeight: 600,
-              transition: 'opacity 0.2s',
-              border: 'none',
               cursor: 'pointer'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
           >
-            Close
+            Go to WhatsApp
+          </button>
+          <button
+            onClick={onCancel}
+            style={{
+              width: '100%',
+              height: '42px',
+              backgroundColor: 'transparent',
+              color: '#6B7280',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            No, Keep Order
           </button>
         </div>
       </div>
     </div>
+  );
+};
+
+// --- Order Details Modal ---
+const OrderDetailsModal = ({ order, userPhoneLastFour, userPhone, onClose }) => {
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  if (!order) return null;
+  const itemsSubtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const cardTitle = order.restaurantId === 'yumzy_store' ? 'Foodish Store' : order.restaurantName;
+
+  // Cancellable: order < 5 minutes old AND status is "Pending"
+  const now = Timestamp.now().seconds;
+  const orderTime = order.createdAt.seconds;
+  const isCancellable = (now - orderTime) < 300 && order.orderStatus === 'Pending';
+
+  const handleCancelOrder = () => {
+    const whatsappNumber = '8801746324620';
+    const message = `Hello, I would like to cancel my order. My phone number is ${userPhone || 'N/A'}.`;
+    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+    setShowCancelConfirm(false);
+    onClose();
+  };
+
+  return (
+    <>
+      {showCancelConfirm && (
+        <CancelConfirmDialog
+          onConfirm={handleCancelOrder}
+          onCancel={() => setShowCancelConfirm(false)}
+        />
+      )}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 100,
+        padding: '16px',
+        backdropFilter: 'blur(4px)'
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+          width: '100%',
+          maxWidth: '448px',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: '16px',
+            borderBottom: '1px solid #E5E7EB',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <h2 style={{
+              fontSize: '18px',
+              fontWeight: 700,
+              color: '#1F2937'
+            }}>Order Summary</h2>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '4px',
+                borderRadius: '9999px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <XMarkIcon style={{ width: '20px', height: '20px', color: '#6B7280' }} />
+            </button>
+          </div>
+
+          {/* Scrollable Content */}
+          <div style={{
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            overflowY: 'auto'
+          }}>
+            <p style={{ fontWeight: 600, color: '#1F2937' }}>{cardTitle}</p>
+            <p style={{ fontSize: '12px', color: '#6B7280' }}>Ordered on {formatTimestamp(order.createdAt)}</p>
+
+            {userPhoneLastFour && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '12px',
+                color: '#9CA3AF'
+              }}>
+                <UserIcon style={{ width: '13px', height: '13px' }} />
+                <span>User ID: ****{userPhoneLastFour}</span>
+              </div>
+            )}
+
+            <p style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: getStatusColor(order.orderStatus).text
+            }}>
+              Status: {order.orderStatus}
+            </p>
+
+            <h3 style={{
+              fontSize: '14px',
+              fontWeight: 700,
+              paddingTop: '8px'
+            }}>Items:</h3>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              fontSize: '14px'
+            }}>
+              {order.items.map((item, index) => (
+                <div key={index} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start'
+                }}>
+                  <div style={{ flex: 1, marginRight: '8px' }}>
+                    <span style={{ color: '#374151' }}>{item.quantity} x {item.name}</span>
+                    {item.miniResName && item.miniResName !== 'Yumzy Store' && (
+                      <span style={{
+                        display: 'block',
+                        fontSize: '12px',
+                        color: '#6B7280',
+                        marginLeft: '16px'
+                      }}>from {item.miniResName}</span>
+                    )}
+                  </div>
+                  <span style={{
+                    fontWeight: 500,
+                    color: '#1F2937',
+                    whiteSpace: 'nowrap'
+                  }}>৳{(item.price * item.quantity).toFixed(0)}</span>
+                </div>
+              ))}
+            </div>
+
+            <hr style={{ margin: '8px 0', borderColor: '#E5E7EB' }} />
+
+            {/* Price Details */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              fontSize: '14px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#4B5563' }}>Items Subtotal</span>
+                <span style={{ fontWeight: 500 }}>৳{itemsSubtotal.toFixed(0)}</span>
+              </div>
+              {order.deliveryCharge > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#4B5563' }}>Delivery Charge</span>
+                  <span style={{ fontWeight: 500 }}>৳{order.deliveryCharge.toFixed(0)}</span>
+                </div>
+              )}
+              {order.serviceCharge > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#4B5563' }}>Service Charge</span>
+                  <span style={{ fontWeight: 500 }}>৳{order.serviceCharge.toFixed(0)}</span>
+                </div>
+              )}
+              <hr style={{ margin: '4px 0', borderColor: '#E5E7EB' }} />
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontWeight: 700,
+                fontSize: '16px',
+                color: '#D50032'
+              }}>
+                <span>Total Payable</span>
+                <span>৳{order.totalPrice.toFixed(0)}</span>
+              </div>
+            </div>
+
+            {/* Cancel Order Button */}
+            {isCancellable && (
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                style={{
+                  width: '100%',
+                  height: '45px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  backgroundColor: 'white',
+                  color: '#EF4444',
+                  border: '1px solid #EF4444',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginTop: '4px'
+                }}
+              >
+                <ExclamationTriangleIcon style={{ width: '18px', height: '18px' }} />
+                Cancel Order
+              </button>
+            )}
+          </div>
+
+          {/* Close Button Footer */}
+          <div style={{
+            padding: '16px',
+            borderTop: '1px solid #E5E7EB'
+          }}>
+            <button
+              onClick={onClose}
+              style={{
+                width: '100%',
+                height: '45px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#B70314',
+                color: 'white',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                transition: 'opacity 0.2s',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 
@@ -373,6 +511,7 @@ function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [userPhone, setUserPhone] = useState('');
 
   // --- Ad Logic ---
   useEffect(() => {
@@ -380,6 +519,35 @@ function OrdersPage() {
       console.log("Orders page loaded with showAd=true");
     }
   }, [showAd, router]);
+
+  // --- Fetch user phone number (Auth first, then Firestore fallback) ---
+  useEffect(() => {
+    if (!user) return;
+
+    if (user.phoneNumber) {
+      setUserPhone(user.phoneNumber);
+      return;
+    }
+
+    // Fallback: fetch from Firestore users collection
+    const fetchPhone = async () => {
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          setUserPhone(data.phoneNumber || data.phone || '');
+        }
+      } catch (err) {
+        console.error("Error fetching user phone:", err);
+      }
+    };
+
+    fetchPhone();
+  }, [user]);
+
+  // Last 4 digits of phone number, recomputed whenever userPhone changes
+  const userPhoneLastFour = userPhone.length >= 4 ? userPhone.slice(-4) : userPhone;
 
   // --- Fetch Orders (with real-time updates) ---
   useEffect(() => {
@@ -394,7 +562,6 @@ function OrdersPage() {
       orderBy('createdAt', 'desc')
     );
 
-    // Use onSnapshot for real-time updates
     const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
       const fetchedOrders = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -407,7 +574,7 @@ function OrdersPage() {
         return {
           id: doc.id,
           restaurantName: data.restaurantName || 'Unknown Restaurant',
-          restaurantId: data.restaurantId || '', // Store the ID
+          restaurantId: data.restaurantId || '',
           totalPrice: Number(data.totalPrice) || 0.0,
           orderStatus: data.orderStatus || 'Unknown',
           createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.now(),
@@ -424,7 +591,6 @@ function OrdersPage() {
       setIsLoading(false);
     });
 
-    // Clean up the listener on unmount
     return () => unsubscribe();
   }, [user]);
 
@@ -522,6 +688,7 @@ function OrdersPage() {
             <OrderCard
               key={order.id}
               order={order}
+              userPhoneLastFour={userPhoneLastFour}
               onClick={() => setSelectedOrder(order)}
             />
           ))
@@ -531,6 +698,8 @@ function OrdersPage() {
       {/* Details Modal */}
       <OrderDetailsModal
         order={selectedOrder}
+        userPhoneLastFour={userPhoneLastFour}
+        userPhone={userPhone}
         onClose={() => setSelectedOrder(null)}
       />
     </div>
