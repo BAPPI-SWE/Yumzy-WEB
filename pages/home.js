@@ -584,7 +584,7 @@ function HomePageContent() {
 
         {/* WhatsApp helpline button */}
         <a
-          href="https://wa.me/8801603738865"
+          href="https://wa.me/8801746324620"
           target="_blank"
           rel="noopener noreferrer"
           className="whatsapp-btn"
