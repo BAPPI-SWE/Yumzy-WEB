@@ -10,7 +10,8 @@ import {
   LockClosedIcon,
   CheckCircleIcon,
   SpeakerWaveIcon,
-  NoSymbolIcon
+  NoSymbolIcon,
+  ShoppingCartIcon
 } from '@heroicons/react/24/solid';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -26,6 +27,146 @@ async function batchInQuery(collectionRef, field, values) {
   );
   return snapshots.flatMap(snap => snap.docs);
 }
+
+// --- Grocery Order Terms & Conditions Popup ---
+const GroceryTermsDialog = ({ onDismiss }) => {
+  const freshRed = '#E8354E';
+  const softRedBg = '#FFF3F4';
+
+  const terms = [
+    { number: '১', text: 'শুধু প্রি-অর্ডার করতে পারবেন। প্রি-অর্ডারের ৩ ঘণ্টার মধ্যে ডেলিভারি।' },
+    { number: '২', text: 'Grocery item এর সাথে Fast food restaurant er খাবার বা city food এর খাবার অর্ডার করলে অর্ডার Cancel হয়ে যাবে।' }
+  ];
+
+  return (
+    <div
+      onClick={onDismiss}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        animation: 'fadeIn 0.2s ease'
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: '400px',
+          backgroundColor: 'white',
+          borderRadius: '24px',
+          overflow: 'hidden',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+          animation: 'popIn 0.25s cubic-bezier(0.34,1.56,0.64,1)'
+        }}
+      >
+        {/* Header band */}
+        <div
+          style={{
+            background: `linear-gradient(to bottom, ${freshRed}, #F4566B)`,
+            padding: '22px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px'
+          }}
+        >
+          <div
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '9999px',
+              backgroundColor: 'rgba(255,255,255,0.18)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}
+          >
+            <ShoppingCartIcon style={{ width: '24px', height: '24px', color: 'white' }} />
+          </div>
+          <h2 style={{ color: 'white', fontWeight: 700, fontSize: '19px', margin: 0 }}>
+            Grocery অর্ডার এর শর্তাবলী
+          </h2>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {terms.map((term) => (
+            <div
+              key={term.number}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                backgroundColor: softRedBg,
+                borderRadius: '14px',
+                padding: '12px'
+              }}
+            >
+              <div
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '9999px',
+                  backgroundColor: freshRed,
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
+              >
+                {term.number}
+              </div>
+              <p style={{ color: '#2B2B2B', fontSize: '14px', fontWeight: 500, margin: 0 }}>
+                {term.text}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Action button */}
+        <div style={{ padding: '0 20px 20px 20px' }}>
+          <button
+            onClick={onDismiss}
+            style={{
+              width: '100%',
+              height: '50px',
+              borderRadius: '14px',
+              border: 'none',
+              backgroundColor: freshRed,
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '16px',
+              cursor: 'pointer'
+            }}
+          >
+            বুঝেছি
+          </button>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes popIn {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 // --- Announcement Card ---
 const AnnouncementCard = ({ announcement }) => {
@@ -178,6 +319,14 @@ export default function SubCategoryListPage() {
   const [userSubLocation, setUserSubLocation] = useState(null);
   const [error, setError] = useState('');
   const [selectedTabIndex, setSelectedTabIndex] = useState(0);
+  const [showGroceryTerms, setShowGroceryTerms] = useState(false);
+
+  // --- Show Grocery terms popup once when entering the Grocery section ---
+  useEffect(() => {
+    if (categoryId && String(categoryId).toLowerCase() === 'grocery') {
+      setShowGroceryTerms(true);
+    }
+  }, [categoryId]);
 
   // --- Fetch Data ---
   useEffect(() => {
@@ -300,6 +449,11 @@ export default function SubCategoryListPage() {
   return (
     <ProtectedRoute>
       <div style={{ minHeight: '100vh', backgroundColor: 'white', display: 'flex', flexDirection: 'column' }}>
+        {/* Grocery order terms & conditions popup */}
+        {showGroceryTerms && (
+          <GroceryTermsDialog onDismiss={() => setShowGroceryTerms(false)} />
+        )}
+
         <div
           style={{
             position: 'sticky',
