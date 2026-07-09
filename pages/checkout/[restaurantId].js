@@ -39,6 +39,36 @@ const PriceRow = ({ label, amount, isTotal = false }) => (
   </div>
 );
 
+// Cute rainy-day warning popup — appears when rainyCharge > 0
+const RainyDayDialog = ({ rainyCharge, onClose }) => {
+  const taka = String.fromCharCode(2547);
+  return (
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px', animation: 'rainyFade 0.25s ease-out' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '28px', width: '100%', maxWidth: '360px', overflow: 'hidden', boxShadow: '0 24px 48px rgba(0,0,0,0.25)', animation: 'rainyPop 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}>
+        <div style={{ padding: '28px 24px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          {/* Floating emoji badge */}
+          <div style={{ width: '96px', height: '96px', borderRadius: '9999px', background: 'linear-gradient(180deg, #E3F2FD 0%, #BBDEFB 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
+            <span style={{ fontSize: '46px', display: 'inline-block', animation: 'rainyFloat 1.4s ease-in-out infinite' }}>{'\uD83C\uDF27\uFE0F'}</span>
+          </div>
+          <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1A1A1A', marginBottom: '10px' }}>{"It's Raining! \u2614"}</h3>
+          <p style={{ fontSize: '14px', color: '#666666', lineHeight: '20px', marginBottom: '18px' }}>
+            {"Due to rainy weather in your area, a small extra charge helps our delivery heroes reach you safely through the rain. \uD83D\uDE4F"}
+          </p>
+          {/* Charge highlight chip */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#E3F2FD', borderRadius: '14px', padding: '10px 18px', marginBottom: '22px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 500, color: '#1565C0' }}>Rainy Day Charge</span>
+            <span style={{ fontSize: '16px', fontWeight: 700, color: '#0D47A1' }}>{taka}{rainyCharge.toFixed(0)}</span>
+          </div>
+          <button onClick={onClose} style={{ width: '100%', height: '50px', borderRadius: '14px', border: 'none', backgroundColor: '#B70314', color: 'white', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
+            {"Got it \uD83D\uDC4D"}
+          </button>
+        </div>
+      </div>
+      <style>{"@keyframes rainyPop{from{transform:scale(0.7);opacity:0}to{transform:scale(1);opacity:1}}@keyframes rainyFade{from{opacity:0}to{opacity:1}}@keyframes rainyFloat{0%,100%{transform:translateY(-4px)}50%{transform:translateY(4px)}}"}</style>
+    </div>
+  );
+};
+
 const OrderSentOverlay = ({ onComplete }) => {
   useEffect(() => { const t = setTimeout(onComplete, 2500); return () => clearTimeout(t); }, [onComplete]);
   return (
@@ -143,6 +173,8 @@ function CheckoutPageContent() {
   const [userProfile, setUserProfile] = useState(null);
   const [deliveryCharge, setDeliveryCharge] = useState(null);
   const [serviceCharge, setServiceCharge] = useState(null);
+  const [rainyCharge, setRainyCharge] = useState(0);
+  const [showRainyDialog, setShowRainyDialog] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isLoadingCharges, setIsLoadingCharges] = useState(true);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -188,16 +220,20 @@ function CheckoutPageContent() {
     if (!userProfile || !restaurantId) return;
     const calculateCharges = async () => {
       setIsLoadingCharges(true); setError('');
-      let baseDelivery = 20.0, baseService = 5.0, additionalDelivery = 0.0, additionalService = 0.0;
+      let baseDelivery = 20.0, baseService = 5.0, baseRainy = 0.0, additionalDelivery = 0.0, additionalService = 0.0;
       const { baseLocation, subLocation } = userProfile;
       if (!baseLocation || !subLocation) {
         setError("Please complete your location details in your profile.");
-        setDeliveryCharge(baseDelivery); setServiceCharge(baseService); setIsLoadingCharges(false); return;
+        setDeliveryCharge(baseDelivery); setServiceCharge(baseService); setRainyCharge(0); setIsLoadingCharges(false); return;
       }
       try {
         const locSnap = await getDocs(query(collection(db, 'locations'), where('name', '==', baseLocation)));
         if (!locSnap.empty) {
           const locData = locSnap.docs[0].data();
+          // Rainy day extra charge for this base location.
+          // Applies only when the base location name matches (which it does here, since the query filters by name == baseLocation).
+          const rainyVal = Number(locData.rainyCharge);
+          if (!isNaN(rainyVal)) baseRainy = rainyVal;
           const subIndex = (locData.subLocations || []).indexOf(subLocation);
           if (subIndex !== -1) {
             const dArr = locData[isPreOrder ? 'deliveryCharge' : 'deliveryChargeYumzy'] || [];
@@ -217,11 +253,15 @@ function CheckoutPageContent() {
         }
         setDeliveryCharge(baseDelivery + additionalDelivery);
         setServiceCharge(baseService + additionalService);
+        setRainyCharge(baseRainy);
+        setShowRainyDialog(baseRainy > 0);
       } catch(err) {
         console.error("Error calculating charges:", err);
         setError("Could not calculate delivery charges. Using defaults.");
         setDeliveryCharge(baseDelivery + additionalDelivery);
         setServiceCharge(baseService + additionalService);
+        setRainyCharge(baseRainy);
+        setShowRainyDialog(baseRainy > 0);
       } finally { setIsLoadingCharges(false); }
     };
     calculateCharges();
@@ -248,7 +288,7 @@ function CheckoutPageContent() {
   const handleConfirmOrder = async () => {
     if (!user || !userProfile || deliveryCharge === null || serviceCharge === null || isPlacingOrder) return;
     setIsPlacingOrder(true); setError('');
-    const finalTotal = itemsSubtotal + deliveryCharge + serviceCharge;
+    const finalTotal = itemsSubtotal + deliveryCharge + serviceCharge + rainyCharge;
     const orderItems = itemsForRestaurant.map(ci => ({
       itemName: ci.menuItem.name, quantity: ci.quantity, price: ci.menuItem.price,
       miniResName: (ci.restaurantName && ci.restaurantName !== 'Yumzy Store') ? ci.restaurantName : ''
@@ -259,7 +299,7 @@ function CheckoutPageContent() {
       userPhone: userProfile.phone || 'N/A', userBaseLocation: userProfile.baseLocation || 'N/A',
       userSubLocation: userProfile.subLocation || 'N/A', building: userProfile.building || '',
       floor: userProfile.floor || '', room: userProfile.room || '',
-      restaurantId, restaurantName, totalPrice: finalTotal, deliveryCharge, serviceCharge,
+      restaurantId, restaurantName, totalPrice: finalTotal, deliveryCharge, serviceCharge, rainyCharge,
       items: orderItems, orderStatus: "Pending", createdAt: Timestamp.now(),
       orderType, preOrderCategory: orderType === "PreOrder" ? (itemsForRestaurant[0]?.menuItem.category || '') : "",
       payment: getPaymentString()
@@ -283,7 +323,7 @@ function CheckoutPageContent() {
     router.push({ pathname: '/orders', query: { showAd: 'true' } });
   };
 
-  const finalTotal = deliveryCharge !== null && serviceCharge !== null ? itemsSubtotal + deliveryCharge + serviceCharge : null;
+  const finalTotal = deliveryCharge !== null && serviceCharge !== null ? itemsSubtotal + deliveryCharge + serviceCharge + rainyCharge : null;
   const isConfirmDisabled = isLoadingCharges || isLoadingProfile || deliveryCharge === null || serviceCharge === null || isPlacingOrder || !!error;
 
   if (!router.isReady || (restaurantId && itemsForRestaurant.length === 0 && !isLoadingCharges && !isLoadingProfile && !orderPlacedRef.current)) {
@@ -383,6 +423,7 @@ function CheckoutPageContent() {
                 <PriceRow label="Items Subtotal" amount={itemsSubtotal} />
                 <PriceRow label="Delivery Charge" amount={deliveryCharge} />
                 <PriceRow label="Service Charge" amount={serviceCharge} />
+                {rainyCharge > 0 && <PriceRow label={"\uD83C\uDF27\uFE0F Rainy Day Charge"} amount={rainyCharge} />}
                 <hr style={{ margin: '8px 0', border: 'none', borderTop: '1px solid #E5E7EB' }} />
                 <PriceRow label="Total to Pay" amount={finalTotal} isTotal={true} />
               </div>
@@ -415,6 +456,7 @@ function CheckoutPageContent() {
       </div>
 
       {showPaymentDialog && <PaymentMethodDialog onClose={() => setShowPaymentDialog(false)} onPaymentSelected={handlePaymentSelect} />}
+      {showRainyDialog && rainyCharge > 0 && <RainyDayDialog rainyCharge={rainyCharge} onClose={() => setShowRainyDialog(false)} />}
       {showOrderSent && <OrderSentOverlay onComplete={handleOrderSentComplete} />}
     </div>
   );
