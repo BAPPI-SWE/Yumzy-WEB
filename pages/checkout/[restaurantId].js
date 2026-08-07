@@ -8,7 +8,8 @@ import ProtectedRoute from '../../components/ProtectedRoute';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { 
   ArrowLeftIcon, MapPinIcon, CheckCircleIcon, ExclamationCircleIcon,
-  BanknotesIcon, CreditCardIcon, XMarkIcon, ArrowRightIcon, CheckIcon, CurrencyBangladeshiIcon
+  BanknotesIcon, CreditCardIcon, XMarkIcon, ArrowRightIcon, CheckIcon, CurrencyBangladeshiIcon,
+  PencilSquareIcon, DocumentTextIcon
 } from '@heroicons/react/24/solid';
 
 const PaymentType = { COD: 'COD', BKASH: 'BKASH', NAGAD: 'NAGAD', ROCKET: 'ROCKET' };
@@ -38,6 +39,94 @@ const PriceRow = ({ label, amount, isTotal = false }) => (
     </span>
   </div>
 );
+
+// Small pill button shown next to the "Order Summary" title — opens the
+// UserNote dialog. Turns green with a checkmark once a userNote is saved.
+const EditUserNoteButton = ({ hasUserNote, onClick }) => (
+  <button
+    onClick={onClick}
+    style={{
+      display: 'inline-flex', alignItems: 'center', gap: '6px',
+      padding: '6px 14px', borderRadius: '9999px', border: 'none', cursor: 'pointer',
+      background: hasUserNote ? 'linear-gradient(90deg, #10B981, #34D399)' : 'linear-gradient(90deg, #B70314, #D50032)',
+      color: 'white', fontSize: '13px', fontWeight: 600
+    }}
+  >
+    {hasUserNote ? <CheckIcon style={{ width: '15px', height: '15px' }} /> : <PencilSquareIcon style={{ width: '15px', height: '15px' }} />}
+    {hasUserNote ? 'UserNote Added' : 'Add UserNote'}
+  </button>
+);
+
+// Dialog for adding / editing / removing the userNote attached to this order.
+const EditUserNoteDialog = ({ initialUserNote, onDismiss, onSave }) => {
+  const [userNoteText, setUserNoteText] = useState(initialUserNote || '');
+  const maxLength = 200;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px', animation: 'userNoteFade 0.2s ease-out' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '24px', width: '100%', maxWidth: '400px', overflow: 'hidden', boxShadow: '0 24px 48px rgba(0,0,0,0.25)', animation: 'userNotePop 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
+        <div style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '9999px', backgroundColor: '#FFF3E0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <DocumentTextIcon style={{ width: '20px', height: '20px', color: '#E65100' }} />
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1A1A', margin: 0 }}>Add Note</h3>
+            </div>
+            <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999999', padding: '4px' }}>
+              <XMarkIcon style={{ width: '22px', height: '22px' }} />
+            </button>
+          </div>
+
+          <p style={{ fontSize: '13px', color: '#666666', margin: '0 0 16px 0' }}>
+            Any special request for the restaurant or delivery rider? (e.g. less spicy, no onions)
+          </p>
+
+          <textarea
+            value={userNoteText}
+            onChange={(e) => { if (e.target.value.length <= maxLength) setUserNoteText(e.target.value); }}
+            placeholder="Type your userNote for the restaurant here..."
+            rows={4}
+            style={{
+              width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '14px',
+              border: '1px solid #D1D5DB', fontSize: '14px', fontFamily: 'inherit', resize: 'vertical'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#D50032'}
+            onBlur={(e) => e.target.style.borderColor = '#D1D5DB'}
+          />
+          <div style={{ textAlign: 'right', fontSize: '11px', color: '#999999', marginTop: '4px' }}>
+            {userNoteText.length}/{maxLength}
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+            {initialUserNote ? (
+              <button
+                onClick={() => onSave('')}
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #DC2626', backgroundColor: 'white', color: '#DC2626', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            ) : (
+              <button
+                onClick={onDismiss}
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: '#F5F5F5', color: '#666666', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              onClick={() => onSave(userNoteText)}
+              style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', backgroundColor: '#B70314', color: 'white', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Save Note
+            </button>
+          </div>
+        </div>
+      </div>
+      <style>{"@keyframes userNotePop{from{transform:scale(0.85);opacity:0}to{transform:scale(1);opacity:1}}@keyframes userNoteFade{from{opacity:0}to{opacity:1}}"}</style>
+    </div>
+  );
+};
 
 // Cute rainy-day warning popup — appears when rainyCharge > 0
 const RainyDayDialog = ({ rainyCharge, onClose }) => {
@@ -183,6 +272,10 @@ function CheckoutPageContent() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState({ type: PaymentType.COD, details: '' });
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
+  // UserNote states — the optional note the customer can attach to the order
+  const [userNote, setUserNote] = useState('');
+  const [showUserNoteDialog, setShowUserNoteDialog] = useState(false);
+
   // KEY FIX: prevents empty-cart guard from redirecting to /cart after order is placed
   const orderPlacedRef = useRef(false);
 
@@ -302,7 +395,8 @@ function CheckoutPageContent() {
       restaurantId, restaurantName, totalPrice: finalTotal, deliveryCharge, serviceCharge, rainyCharge,
       items: orderItems, orderStatus: "Pending", createdAt: Timestamp.now(),
       orderType, preOrderCategory: orderType === "PreOrder" ? (itemsForRestaurant[0]?.menuItem.category || '') : "",
-      payment: getPaymentString()
+      payment: getPaymentString(),
+      userNote: userNote.trim() // NEW: optional note from the customer
     };
     try {
       await addDoc(collection(db, 'orders'), newOrder);
@@ -361,7 +455,10 @@ function CheckoutPageContent() {
         </section>
 
         <section>
-          <SectionHeader title="Order Summary" />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', paddingLeft: '20px', paddingRight: '16px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1F2937', margin: 0 }}>Order Summary</h2>
+            <EditUserNoteButton hasUserNote={!!userNote} onClick={() => setShowUserNoteDialog(true)} />
+          </div>
           <ModernCard>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {itemsForRestaurant.map((item, index) => (
@@ -375,6 +472,20 @@ function CheckoutPageContent() {
                   <span style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937', whiteSpace: 'nowrap' }}>{taka}{(item.menuItem.price * item.quantity).toFixed(0)}</span>
                 </div>
               ))}
+
+              {/* UserNote preview, shown only when a userNote has been added */}
+              {userNote && (
+                <div
+                  onClick={() => setShowUserNoteDialog(true)}
+                  style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', backgroundColor: '#FFF3E0', borderRadius: '12px', padding: '12px 14px', cursor: 'pointer', marginTop: '4px' }}
+                >
+                  <DocumentTextIcon style={{ width: '18px', height: '18px', color: '#E65100', flexShrink: 0, marginTop: '1px' }} />
+                  <div>
+                    <p style={{ fontSize: '12px', fontWeight: 600, color: '#E65100', margin: 0 }}>UserNote to restaurant</p>
+                    <p style={{ fontSize: '13px', color: '#666666', margin: '2px 0 0 0' }}>{userNote}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </ModernCard>
         </section>
@@ -457,6 +568,13 @@ function CheckoutPageContent() {
 
       {showPaymentDialog && <PaymentMethodDialog onClose={() => setShowPaymentDialog(false)} onPaymentSelected={handlePaymentSelect} />}
       {showRainyDialog && rainyCharge > 0 && <RainyDayDialog rainyCharge={rainyCharge} onClose={() => setShowRainyDialog(false)} />}
+      {showUserNoteDialog && (
+        <EditUserNoteDialog
+          initialUserNote={userNote}
+          onDismiss={() => setShowUserNoteDialog(false)}
+          onSave={(note) => { setUserNote(note.trim()); setShowUserNoteDialog(false); }}
+        />
+      )}
       {showOrderSent && <OrderSentOverlay onComplete={handleOrderSentComplete} />}
     </div>
   );
