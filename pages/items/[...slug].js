@@ -26,12 +26,20 @@ const SortOrder = {
   PRICE_HIGH_TO_LOW: 'high_low',
 };
 
-// --- Helper function to get relevant price for sorting ---
+// --- Helper: discounted price ---
+const applyDiscount = (originalPrice, discountPercent) => {
+  if (discountPercent && discountPercent > 0) {
+    return originalPrice * (1 - discountPercent / 100);
+  }
+  return originalPrice;
+};
+
+// --- Helper function to get relevant price for sorting (uses discounted price) ---
 const getSortPrice = (item) => {
   if (item.variants && item.variants.length > 0) {
-    return Math.min(...item.variants.map((v) => v.price));
+    return Math.min(...item.variants.map((v) => applyDiscount(v.price, item.itemDiscount)));
   }
-  return item.price;
+  return applyDiscount(item.price, item.itemDiscount);
 };
 
 // --- Responsive grid style injected once ---
@@ -77,6 +85,29 @@ function injectGridStyle() {
   document.head.appendChild(style);
 }
 
+// --- Discount Ribbon Badge ---
+const DiscountRibbonBadge = ({ discountPercent }) => (
+  <span style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '3px',
+    backgroundColor: '#E53935',
+    color: 'white',
+    fontSize: '11px',
+    fontWeight: 700,
+    padding: '5px 10px',
+    borderRadius: '0 0 12px 0',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
+    zIndex: 1,
+  }}>
+    <TagIcon style={{ width: '12px', height: '12px' }} />
+    {Math.round(discountPercent)}% OFF
+  </span>
+);
+
 // --- Item Card ---
 const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClick, isEnabled }) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -84,14 +115,20 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
   // Inject responsive styles on first render
   useEffect(() => { injectGridStyle(); }, []);
 
-  const displayPrice =
-    item.variants && item.variants.length > 0
-      ? `৳${Math.min(...item.variants.map((v) => v.price)).toFixed(0)} - ৳${Math.max(
-          ...item.variants.map((v) => v.price)
-        ).toFixed(0)}`
-      : `৳${item.price.toFixed(0)}`;
-
+  const hasDiscount = item.itemDiscount > 0;
   const isMultiVariant = item.variants && item.variants.length > 0;
+
+  const originalDisplayPrice = isMultiVariant
+    ? `৳${Math.min(...item.variants.map((v) => v.price)).toFixed(0)} - ৳${Math.max(
+        ...item.variants.map((v) => v.price)
+      ).toFixed(0)}`
+    : `৳${item.price.toFixed(0)}`;
+
+  const discountedDisplayPrice = isMultiVariant
+    ? `৳${Math.min(...item.variants.map((v) => applyDiscount(v.price, item.itemDiscount))).toFixed(0)} - ৳${Math.max(
+        ...item.variants.map((v) => applyDiscount(v.price, item.itemDiscount))
+      ).toFixed(0)}`
+    : `৳${applyDiscount(item.price, item.itemDiscount).toFixed(0)}`;
 
   return (
     <div
@@ -137,6 +174,7 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
             }}
             loading="lazy"
           />
+          {hasDiscount && <DiscountRibbonBadge discountPercent={item.itemDiscount} />}
           {!isEnabled && (
             <div style={{
               position: 'absolute',
@@ -201,7 +239,21 @@ const StoreItemCard = ({ item, quantity, onAdd, onIncrement, onDecrement, onClic
         )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '8px' }}>
-          <span style={{ fontSize: '16px', fontWeight: 700, color: '#DC0C25' }}>{displayPrice}</span>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {hasDiscount && (
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 500,
+                color: '#9CA3AF',
+                textDecoration: 'line-through',
+              }}>
+                {originalDisplayPrice}
+              </span>
+            )}
+            <span style={{ fontSize: '16px', fontWeight: 700, color: hasDiscount ? '#E53935' : '#DC0C25' }}>
+              {discountedDisplayPrice}
+            </span>
+          </div>
           {isMultiVariant ? (
             <button
               onClick={onClick}
@@ -479,6 +531,7 @@ export default function ItemGridPage() {
             variants,
             miniResId: miniResId || '',
             miniResName,
+            itemDiscount: parseFloat(data.itemDiscount) || 0,
           };
         });
 
@@ -646,7 +699,13 @@ export default function ItemGridPage() {
                     quantity = cart[item.id]?.quantity || 0;
                   }
 
-                  const cartMenuItem = { id: item.id, name: item.name, price: item.price };
+                  // Discounted price is what actually gets added to the cart,
+                  // so it flows through to checkout automatically.
+                  const cartMenuItem = {
+                    id: item.id,
+                    name: item.name,
+                    price: applyDiscount(item.price, item.itemDiscount),
+                  };
                   const restaurantDetails = {
                     restaurantId: 'yumzy_store',
                     restaurantName: item.miniResName || 'Yumzy Store',

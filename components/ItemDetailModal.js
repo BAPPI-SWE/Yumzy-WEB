@@ -1,6 +1,14 @@
 import { useCart } from '../context/CartContext';
-import { XMarkIcon, PlusIcon, MinusIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, PlusIcon, MinusIcon, BuildingStorefrontIcon, TagIcon } from '@heroicons/react/24/solid';
 import { useState, useMemo } from 'react';
+
+// --- Helper: discounted price (same logic as the grid page) ---
+const applyDiscount = (originalPrice, discountPercent) => {
+  if (discountPercent && discountPercent > 0) {
+    return originalPrice * (1 - discountPercent / 100);
+  }
+  return originalPrice;
+};
 
 // Quantity Selector
 const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled }) => {
@@ -97,6 +105,58 @@ const QuantitySelector = ({ quantity, onAdd, onIncrement, onDecrement, isEnabled
   }
 };
 
+// --- Discount ribbon badge, matching the grid page style ---
+const DiscountRibbonBadge = ({ discountPercent }) => (
+  <span
+    style={{
+      position: 'absolute',
+      top: '12px',
+      left: '12px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+      backgroundColor: '#E53935',
+      color: 'white',
+      fontSize: '12px',
+      fontWeight: 700,
+      padding: '5px 10px',
+      borderRadius: '9999px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+      zIndex: 10,
+    }}
+  >
+    <TagIcon style={{ width: '13px', height: '13px' }} />
+    {Math.round(discountPercent)}% OFF
+  </span>
+);
+
+// --- Price block: strikethrough original + discounted price when a discount applies ---
+const PriceBlock = ({ originalPrice, discountPercent, size = 'large' }) => {
+  const hasDiscount = discountPercent > 0;
+  const discounted = applyDiscount(originalPrice, discountPercent);
+  const priceFontSize = size === 'large' ? '20px' : '14px';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {hasDiscount && (
+        <span
+          style={{
+            fontSize: '12px',
+            color: '#9CA3AF',
+            textDecoration: 'line-through',
+            fontWeight: 500,
+          }}
+        >
+          ৳{originalPrice.toFixed(0)}
+        </span>
+      )}
+      <p style={{ fontSize: priceFontSize, fontWeight: 700, color: hasDiscount ? '#E53935' : '#DC0C25', margin: 0 }}>
+        ৳{discounted.toFixed(0)}
+      </p>
+    </div>
+  );
+};
+
 export default function ItemDetailModal({ item, onClose }) {
   const [closeHovered, setCloseHovered] = useState(false);
   const [doneHovered, setDoneHovered] = useState(false);
@@ -122,11 +182,16 @@ export default function ItemDetailModal({ item, onClose }) {
 
   // This variable is safe to declare here as it's not a hook
   const isEnabled = item.isEnabled;
+  const itemDiscount = item.itemDiscount || 0;
+  const hasDiscount = itemDiscount > 0;
 
+  // Cart item price is always the discounted price, so it flows through to
+  // checkout automatically (CartContext just stores whatever price it's given).
   const createCartMenuItem = (variant = null) => {
     const id = variant ? `${item.id}_${variant.name}` : item.id;
     const name = variant ? `${item.name} (${variant.name})` : item.name;
-    const price = variant ? variant.price : item.price;
+    const basePrice = variant ? variant.price : item.price;
+    const price = applyDiscount(basePrice, itemDiscount);
     return { id, name, price, category: 'Store Item' };
   };
 
@@ -191,6 +256,8 @@ export default function ItemDetailModal({ item, onClose }) {
               objectFit: 'cover'
             }}
           />
+          {/* Discount Ribbon */}
+          {hasDiscount && <DiscountRibbonBadge discountPercent={itemDiscount} />}
           {/* Close Button */}
           <button
             onClick={onClose}
@@ -221,7 +288,7 @@ export default function ItemDetailModal({ item, onClose }) {
             <span
               style={{
                 position: 'absolute',
-                top: '12px',
+                bottom: '12px',
                 left: '12px',
                 display: 'flex',
                 alignItems: 'center',
@@ -312,10 +379,12 @@ export default function ItemDetailModal({ item, onClose }) {
                     }}
                   >
                     <div>
-                      <p style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>{variant.name}</p>
-                      <p style={{ fontSize: '14px', fontWeight: 700, color: '#DC0C25' }}>
-                        ৳{variant.price.toFixed(0)}
-                      </p>
+                      <p style={{ fontSize: '14px', fontWeight: 500, color: '#1F2937', margin: '0 0 2px 0' }}>{variant.name}</p>
+                      <PriceBlock
+                        originalPrice={variant.price}
+                        discountPercent={itemDiscount}
+                        size="small"
+                      />
                     </div>
                     <QuantitySelector
                       quantity={quantity}
@@ -338,10 +407,12 @@ export default function ItemDetailModal({ item, onClose }) {
               }}
             >
               <div>
-                <p style={{ fontSize: '12px', color: '#6B7280' }}>Price</p>
-                <p style={{ fontSize: '20px', fontWeight: 700, color: '#DC0C25' }}>
-                  ৳{item.price.toFixed(0)}
-                </p>
+                <p style={{ fontSize: '12px', color: '#6B7280', margin: '0 0 2px 0' }}>Price</p>
+                <PriceBlock
+                  originalPrice={item.price}
+                  discountPercent={itemDiscount}
+                  size="large"
+                />
               </div>
               <QuantitySelector
                 quantity={cart[item.id]?.quantity || 0}
