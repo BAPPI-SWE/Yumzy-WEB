@@ -53,7 +53,7 @@ const EditUserNoteButton = ({ hasUserNote, onClick }) => (
     }}
   >
     {hasUserNote ? <CheckIcon style={{ width: '15px', height: '15px' }} /> : <PencilSquareIcon style={{ width: '15px', height: '15px' }} />}
-    {hasUserNote ? 'UserNote Added' : 'Add UserNote'}
+    {hasUserNote ? 'UserNote Added' : 'Add Note'}
   </button>
 );
 
