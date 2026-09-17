@@ -83,7 +83,7 @@ const HeroHeader = ({ order, activeStage, isCancelled, etaRange }) => {
     emoji = '\u2705';
   } else if (activeStage === 'RECEIVED') {
     headline = 'Order Received';
-    sub = `${order.restaurantName} has your order`;
+    sub ="Restaurant Seen your order";
     emoji = '\u{1F4E9}';
   }
 
