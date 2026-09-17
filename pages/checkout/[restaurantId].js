@@ -276,6 +276,10 @@ function CheckoutPageContent() {
   const [userNote, setUserNote] = useState('');
   const [showUserNoteDialog, setShowUserNoteDialog] = useState(false);
 
+  // The Firestore doc id of the order just placed — used to route to its
+  // tracking page once the "Order Sent" animation finishes.
+  const [placedOrderId, setPlacedOrderId] = useState(null);
+
   // KEY FIX: prevents empty-cart guard from redirecting to /cart after order is placed
   const orderPlacedRef = useRef(false);
 
@@ -399,9 +403,10 @@ function CheckoutPageContent() {
       userNote: userNote.trim() // NEW: optional note from the customer
     };
     try {
-      await addDoc(collection(db, 'orders'), newOrder);
+      const docRef = await addDoc(collection(db, 'orders'), newOrder);
       // Set ref BEFORE clearing cart — prevents the empty-cart guard from redirecting to /cart
       orderPlacedRef.current = true;
+      setPlacedOrderId(docRef.id);
       clearCartForRestaurant(restaurantId);
       setShowOrderSent(true);
     } catch(err) {
@@ -411,10 +416,14 @@ function CheckoutPageContent() {
     }
   };
 
-  // After success animation → redirect to orders
+  // After success animation → go straight to that order's tracking page
   const handleOrderSentComplete = () => {
     setShowOrderSent(false);
-    router.push({ pathname: '/orders', query: { showAd: 'true' } });
+    if (placedOrderId) {
+      router.push(`/order-tracking/${placedOrderId}`);
+    } else {
+      router.push('/orders');
+    }
   };
 
   const finalTotal = deliveryCharge !== null && serviceCharge !== null ? itemsSubtotal + deliveryCharge + serviceCharge + rainyCharge : null;
