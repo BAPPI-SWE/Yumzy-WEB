@@ -65,7 +65,7 @@ const HeroHeader = ({ order, activeStage, isCancelled, etaRange }) => {
   } else if (activeStage === 'DELIVERED') {
     gradient = 'linear-gradient(145deg, #66BB6A 0%, #2E7D32 100%)';
     headline = 'Delivered!';
-    sub = `Enjoy your meal from ${order.restaurantName}`;
+    sub = "Enjoy your meal from Foodish";
     emoji = '\u{1F389}';
   } else if (activeStage === 'ON_THE_WAY') {
     gradient = 'linear-gradient(145deg, #42A5F5 0%, #1565C0 100%)';
@@ -75,7 +75,7 @@ const HeroHeader = ({ order, activeStage, isCancelled, etaRange }) => {
   } else if (activeStage === 'PREPARING') {
     gradient = 'linear-gradient(145deg, #FFB74D 0%, #EF6C00 100%)';
     headline = 'Preparing Your Food';
-    sub = `${order.restaurantName} is cooking your order`;
+    sub = "Foodish is preparing your order";
     emoji = '\u{1F373}';
   } else if (activeStage === 'CONFIRMED') {
     headline = 'Order Confirmed';
