@@ -4,14 +4,14 @@ import { useRouter } from 'next/router';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
-import { doc, getDoc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, updateDoc, Timestamp } from 'firebase/firestore';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import {
   ArrowLeftIcon, PhoneIcon, ClockIcon, CheckIcon,
   ExclamationTriangleIcon, TruckIcon, FireIcon, UserIcon,
 } from '@heroicons/react/24/solid';
 import {
-  TRACKING_STAGES, computeProgress, computeEtaRangeMinutes,
+  TRACKING_STAGES, computeProgress, computeEtaEstimate,
 } from '../../lib/orderTracking';
 
 const taka = String.fromCharCode(2547);
@@ -51,7 +51,7 @@ const CancelConfirmDialog = ({ onConfirm, onCancel }) => (
 );
 
 // --- Hero header ---
-const HeroHeader = ({ order, activeStage, isCancelled, etaRange }) => {
+const HeroHeader = ({ order, activeStage, isCancelled, etaEstimate }) => {
   let gradient = 'linear-gradient(145deg, #DC0C25 0%, #A50018 100%)';
   let headline = 'Order Placed';
   let sub = 'Sending your order to the restaurant';
@@ -65,7 +65,7 @@ const HeroHeader = ({ order, activeStage, isCancelled, etaRange }) => {
   } else if (activeStage === 'DELIVERED') {
     gradient = 'linear-gradient(145deg, #66BB6A 0%, #2E7D32 100%)';
     headline = 'Delivered!';
-    sub = "Enjoy your meal from Foodish";
+    sub = `Enjoy your meal from ${order.restaurantName}`;
     emoji = '\u{1F389}';
   } else if (activeStage === 'ON_THE_WAY') {
     gradient = 'linear-gradient(145deg, #42A5F5 0%, #1565C0 100%)';
@@ -75,7 +75,7 @@ const HeroHeader = ({ order, activeStage, isCancelled, etaRange }) => {
   } else if (activeStage === 'PREPARING') {
     gradient = 'linear-gradient(145deg, #FFB74D 0%, #EF6C00 100%)';
     headline = 'Preparing Your Food';
-    sub = "Foodish is preparing your order";
+    sub = `${order.restaurantName} is cooking your order`;
     emoji = '\u{1F373}';
   } else if (activeStage === 'CONFIRMED') {
     headline = 'Order Confirmed';
@@ -83,7 +83,7 @@ const HeroHeader = ({ order, activeStage, isCancelled, etaRange }) => {
     emoji = '\u2705';
   } else if (activeStage === 'RECEIVED') {
     headline = 'Order Received';
-    sub ="Restaurant Seen your order";
+    sub = `${order.restaurantName} has your order`;
     emoji = '\u{1F4E9}';
   }
 
@@ -104,17 +104,24 @@ const HeroHeader = ({ order, activeStage, isCancelled, etaRange }) => {
       <h1 style={{ color: 'white', fontSize: '22px', fontWeight: 700, margin: 0 }}>{headline}</h1>
       <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '13px', marginTop: '4px', maxWidth: '320px' }}>{sub}</p>
 
-      {etaRange && (
-        <div style={{
-          marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '8px',
-          backgroundColor: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.35)',
-          borderRadius: '24px', padding: '8px 16px'
-        }}>
-          <ClockIcon style={{ width: '16px', height: '16px', color: 'white' }} />
-          <span style={{ color: 'white', fontSize: '14px', fontWeight: 700 }}>
-            Arriving in {etaRange[0]}-{etaRange[1]} min
-          </span>
-        </div>
+      {etaEstimate && (
+        <>
+          <div style={{
+            marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '8px',
+            backgroundColor: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.35)',
+            borderRadius: '24px', padding: '8px 16px'
+          }}>
+            <ClockIcon style={{ width: '16px', height: '16px', color: 'white' }} />
+            <span style={{ color: 'white', fontSize: '14px', fontWeight: 700 }}>
+              Arriving in {etaEstimate.lowerMin}-{etaEstimate.upperMin} min
+            </span>
+          </div>
+          {etaEstimate.extended && (
+            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '11px', fontStyle: 'italic', margin: '6px 0 0 0' }}>
+              Kitchen&apos;s a bit busier than usual — estimate updated
+            </p>
+          )}
+        </>
       )}
 
       <div style={{
@@ -130,7 +137,7 @@ const HeroHeader = ({ order, activeStage, isCancelled, etaRange }) => {
 };
 
 // --- Cooking animation row ---
-const CookingRow = ({ etaRange }) => (
+const CookingRow = ({ etaEstimate }) => (
   <div style={{ backgroundColor: '#FFF3E0', borderRadius: '14px', padding: '10px 14px', marginTop: '10px' }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
       <FireIcon style={{ width: '20px', height: '20px', color: '#EF6C00', animation: 'ot-bounce 0.5s ease-in-out infinite alternate' }} />
@@ -141,10 +148,17 @@ const CookingRow = ({ etaRange }) => (
         </span>
       </span>
     </div>
-    {etaRange && (
-      <p style={{ fontSize: '12px', fontWeight: 600, color: '#B86200', margin: '6px 0 0 30px' }}>
-        Estimated delivery: {etaRange[0]}-{etaRange[1]} min
-      </p>
+    {etaEstimate && (
+      <>
+        <p style={{ fontSize: '12px', fontWeight: 600, color: '#B86200', margin: '6px 0 0 30px' }}>
+          Estimated delivery: {etaEstimate.lowerMin}-{etaEstimate.upperMin} min
+        </p>
+        {etaEstimate.extended && (
+          <p style={{ fontSize: '11px', fontStyle: 'italic', color: 'rgba(184,98,0,0.85)', margin: '2px 0 0 30px' }}>
+            Running a little longer than usual today
+          </p>
+        )}
+      </>
     )}
     <style>{`
       @keyframes ot-bounce { from { transform: translateY(0); } to { transform: translateY(-4px); } }
@@ -280,7 +294,6 @@ function OrderTrackingPageContent() {
   const [userPhone, setUserPhone] = useState('');
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [nowMillis, setNowMillis] = useState(Date.now());
-  const [preparingStartMillis, setPreparingStartMillis] = useState(null);
 
   // Live 1-second ticker
   useEffect(() => {
@@ -312,6 +325,10 @@ function OrderTrackingPageContent() {
           serviceCharge: Number(data.serviceCharge) || 0,
           riderName: data.riderName || '',
           riderId: data.riderId || '',
+          // Persisted once, the first time any viewer observes this order
+          // enter "Preparing" — lets the ETA countdown survive navigation,
+          // page reloads, and being viewed from another device.
+          preparingStartedAt: data.preparingStartedAt instanceof Timestamp ? data.preparingStartedAt : null,
         });
       }
     });
@@ -344,13 +361,22 @@ function OrderTrackingPageContent() {
   const progress = order ? computeProgress(order, nowMillis) : { activeStage: null, reachedStages: new Set() };
 
   // The ETA countdown should only start ticking once the order is actually
-  // being prepared — not from the moment it was placed. We capture the
-  // wall-clock time the very first time we observe this, and count from there.
+  // being prepared — not from the moment it was placed, and it must survive
+  // navigating away, reloading the page, or being viewed from another
+  // device. So instead of local state, we persist it to Firestore the very
+  // first time ANY viewer observes this order enter PREPARING, then everyone
+  // just reads that same timestamp back. The `activeStage` dependency means
+  // this effect body only runs when the stage changes (not every tick), and
+  // the guard skips the write entirely once `preparingStartedAt` is already
+  // set — including right after our own write comes back through onSnapshot.
   useEffect(() => {
-    if (progress.activeStage === 'PREPARING' && preparingStartMillis === null) {
-      setPreparingStartMillis(Date.now());
+    if (!orderId || !order) return;
+    if (progress.activeStage === 'PREPARING' && !order.preparingStartedAt) {
+      updateDoc(doc(db, 'orders', orderId), { preparingStartedAt: Timestamp.now() }).catch(() => {
+        // Another viewer may have already set it — safe to ignore.
+      });
     }
-  }, [progress.activeStage, preparingStartMillis]);
+  }, [progress.activeStage, order?.preparingStartedAt, orderId]);
 
   if (isLoading || !order) {
     return <LoadingSpinner />;
@@ -359,8 +385,9 @@ function OrderTrackingPageContent() {
   const isCancelled = (order.orderStatus || '').toLowerCase() === 'cancelled';
   const { activeStage, reachedStages } = progress;
 
+  const preparingStartMillis = order.preparingStartedAt ? order.preparingStartedAt.toDate().getTime() : null;
   const showEta = !isCancelled && activeStage === 'PREPARING' && preparingStartMillis !== null;
-  const etaRange = showEta ? computeEtaRangeMinutes(order.id, preparingStartMillis, nowMillis) : null;
+  const etaEstimate = showEta ? computeEtaEstimate(order.id, preparingStartMillis, nowMillis) : null;
 
   // 3-minute cancellation window, reactive via the ticker.
   const createdMillis = order.createdAt.toDate().getTime();
@@ -394,7 +421,7 @@ function OrderTrackingPageContent() {
         <h1 style={{ fontSize: '17px', fontWeight: 700, color: '#1F2937', margin: 0 }}>Track Order</h1>
       </div>
 
-      <HeroHeader order={order} activeStage={activeStage} isCancelled={isCancelled} etaRange={etaRange} />
+      <HeroHeader order={order} activeStage={activeStage} isCancelled={isCancelled} etaEstimate={etaEstimate} />
 
       <div style={{ maxWidth: '560px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '20px' }}>
         {isCancelled ? (
@@ -407,7 +434,7 @@ function OrderTrackingPageContent() {
               const isLast = state === 'ACTIVE';
               return (
                 <TimelineStepRow key={stageDef.key} stageDef={stageDef} state={state} isLast={isLast}>
-                  {stageDef.key === 'PREPARING' && state === 'ACTIVE' && <CookingRow etaRange={etaRange} />}
+                  {stageDef.key === 'PREPARING' && state === 'ACTIVE' && <CookingRow etaEstimate={etaEstimate} />}
                   {stageDef.key === 'ACCEPTED' && state !== 'PENDING' && <RiderCard order={order} riderPhone={riderPhone} />}
                   {stageDef.key === 'ON_THE_WAY' && state === 'ACTIVE' && <OnTheWayRow />}
                 </TimelineStepRow>
