@@ -403,6 +403,7 @@ function OrderTrackingPageContent() {
   };
 
   const itemsSubtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const userPhoneLastFour = userPhone.length >= 4 ? userPhone.slice(-4) : userPhone;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F8F9FA', paddingBottom: '40px' }}>
@@ -446,7 +447,13 @@ function OrderTrackingPageContent() {
         {/* Order items + price */}
         <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '20px', margin: '0 16px' }}>
           <p style={{ fontWeight: 700, fontSize: '16px', color: '#1F2937', margin: 0 }}>{order.restaurantName}</p>
-          <p style={{ fontSize: '12px', color: '#757575', margin: '4px 0 14px 0' }}>Ordered on {formatTimestamp(order.createdAt)}</p>
+          <p style={{ fontSize: '12px', color: '#757575', margin: '4px 0 10px 0' }}>Ordered on {formatTimestamp(order.createdAt)}</p>
+          {userPhoneLastFour && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#9CA3AF', marginBottom: '10px' }}>
+              <UserIcon style={{ width: '13px', height: '13px' }} />
+              <span>User ID: ****{userPhoneLastFour}</span>
+            </div>
+          )}
           <hr style={{ border: 'none', borderTop: '1px solid #EFEFEF', margin: '0 0 14px 0' }} />
           {order.items.map((item, idx) => (
             <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#333333', padding: '4px 0' }}>
