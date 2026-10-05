@@ -17,7 +17,7 @@ const PaymentType = { COD: 'COD', BKASH: 'BKASH', NAGAD: 'NAGAD', ROCKET: 'ROCKE
 const paymentMethods = {
   COD:    { name: 'Cash on Delivery', color: '#10B981', icon: BanknotesIcon },
   BKASH:  { name: 'Bkash',  number: '01970102586',  color: '#E2136E', icon: CurrencyBangladeshiIcon },
-  NAGAD:  { name: 'Nagad',  number: '01988143409',  color: '#F15A29', icon: CurrencyBangladeshiIcon },
+  NAGAD:  { name: 'Nagad',  number: '01970102586',  color: '#F15A29', icon: CurrencyBangladeshiIcon },
   ROCKET: { name: 'Rocket', number: '017463246207', color: '#00AEEF', icon: CurrencyBangladeshiIcon },
 };
 
