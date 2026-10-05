@@ -231,7 +231,7 @@ const PaymentMethodDialog = ({ onClose, onPaymentSelected }) => {
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><XMarkIcon style={{ width: '24px', height: '24px' }} /></button>
         </div>
         <div style={{ padding: '20px' }}>
-          {[['BKASH','Bkash','01970102586','#E2136E'],['NAGAD','Nagad','01988143409','#F15A29'],['ROCKET','Rocket','017463246207','#00AEEF']].map(([type, label, num, color], i) => (
+          {[['BKASH','Bkash','01970102586','#E2136E'],['NAGAD','Nagad','01970102586','#F15A29'],['ROCKET','Rocket','017463246207','#00AEEF']].map(([type, label, num, color], i) => (
             <button key={type} onClick={() => setSelectedMethod(type)}
               style={{ width: '100%', padding: '16px', backgroundColor: '#F8F9FA', border: '1px solid #E0E0E0', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: i < 2 ? '12px' : '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -370,7 +370,7 @@ function CheckoutPageContent() {
     switch (selectedPaymentMethod.type) {
       case PaymentType.COD:    return 'COD';
       case PaymentType.BKASH:  return "Bkash,01970102586," + selectedPaymentMethod.details;
-      case PaymentType.NAGAD:  return "Nagad,01988143409," + selectedPaymentMethod.details;
+      case PaymentType.NAGAD:  return "Nagad,01970102586," + selectedPaymentMethod.details;
       case PaymentType.ROCKET: return "Rocket,017463246207," + selectedPaymentMethod.details;
       default: return 'COD';
     }
