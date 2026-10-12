@@ -235,7 +235,7 @@ const PaymentInstructions = ({ method, type }) => {
       ) : (
         <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FBBF24', borderRadius: '8px', padding: '12px' }}>
           <p style={{ fontSize: '14px', color: '#92400E', fontWeight: 600, margin: 0 }}>Send money to {method.number}</p>
-          <p style={{ fontSize: '12px', color: '#92400E', marginTop: '4px', marginBottom: 0 }}>Then enter your mobile number and transaction ID below.</p>
+          <p style={{ fontSize: '12px', color: '#92400E', marginTop: '4px', marginBottom: 0 }}>Send Money সম্পন্ন হলে নিচে আপনার ফোন নম্বর এবং ট্রান্সেকশন আইডি দিন।</p>
         </div>
       )}
     </div>
