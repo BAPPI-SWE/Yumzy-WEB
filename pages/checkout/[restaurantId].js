@@ -9,14 +9,14 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { 
   ArrowLeftIcon, MapPinIcon, CheckCircleIcon, ExclamationCircleIcon,
   BanknotesIcon, CreditCardIcon, XMarkIcon, ArrowRightIcon, CheckIcon, CurrencyBangladeshiIcon,
-  PencilSquareIcon, DocumentTextIcon
+  PencilSquareIcon, DocumentTextIcon, ClipboardDocumentIcon
 } from '@heroicons/react/24/solid';
 
 const PaymentType = { COD: 'COD', BKASH: 'BKASH', NAGAD: 'NAGAD', ROCKET: 'ROCKET' };
 
 const paymentMethods = {
   COD:    { name: 'Cash on Delivery', color: '#10B981', icon: BanknotesIcon },
-  BKASH:  { name: 'Bkash',  number: '01970102586',  color: '#E2136E', icon: CurrencyBangladeshiIcon },
+  BKASH:  { name: 'Bkash',  number: '01315519033',  color: '#E2136E', icon: CurrencyBangladeshiIcon },
   NAGAD:  { name: 'Nagad',  number: '01970102586',  color: '#F15A29', icon: CurrencyBangladeshiIcon },
   ROCKET: { name: 'Rocket', number: '017463246207', color: '#00AEEF', icon: CurrencyBangladeshiIcon },
 };
@@ -172,6 +172,76 @@ const OrderSentOverlay = ({ onComplete }) => {
   );
 };
 
+// Copy-to-clipboard button for the payment number
+const CopyNumberButton = ({ number, color }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(number);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = number; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (e) { console.error('Copy failed', e); }
+  };
+  return (
+    <button onClick={handleCopy} type="button" style={{
+      display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer',
+      backgroundColor: copied ? '#16A34A' : color, color: 'white', borderRadius: '10px',
+      padding: '8px 12px', fontSize: '12px', fontWeight: 600, flexShrink: 0, transition: 'background-color 0.2s'
+    }}>
+      {copied ? <CheckIcon style={{ width: '14px', height: '14px' }} /> : <ClipboardDocumentIcon style={{ width: '14px', height: '14px' }} />}
+      {copied ? 'Copied!' : 'Copy'}
+    </button>
+  );
+};
+
+// Number card + instructions. bKash = "Payment" (Bangla guide), Nagad/Rocket = "Send Money"
+const PaymentInstructions = ({ method, type }) => {
+  const isBkash = type === 'BKASH';
+  return (
+    <div style={{ marginBottom: '20px' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '14px',
+        backgroundColor: method.color + '14', border: '1px solid ' + method.color + '59', marginBottom: '14px'
+      }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontSize: '11px', color: '#666666' }}>{isBkash ? 'বিকাশ পেমেন্ট নম্বর' : method.name + ' Number'}</p>
+          <p style={{ margin: 0, fontSize: '18px', fontWeight: 700, letterSpacing: '1px', color: method.color }}>{method.number}</p>
+        </div>
+        <CopyNumberButton number={method.number} color={method.color} />
+      </div>
+
+      {isBkash ? (
+        <>
+          <div style={{ backgroundColor: '#FFF8E1', border: '1px solid #FFC107', borderRadius: '14px', padding: '14px' }}>
+            <p style={{ margin: 0, fontSize: '14px', color: '#3E2723', lineHeight: '24px' }}>
+              আপনার বিকাশ অ্যাপ থেকে{' '}
+              <span style={{ backgroundColor: '#E2136E', color: 'white', fontWeight: 700, borderRadius: '6px', padding: '2px 8px' }}>Payment</span>
+              {' '}অপশনটি সিলেক্ট করে উপরের নম্বরে পেমেন্ট করুন।
+            </p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '12px', fontWeight: 600, color: '#D84315' }}>
+              ⚠️ এটি &quot;Send Money&quot; নয় — অবশ্যই &quot;Payment&quot; অপশন ব্যবহার করুন।
+            </p>
+          </div>
+          <p style={{ margin: '10px 0 0 0', fontSize: '14px', color: '#666666' }}>
+            পেমেন্ট সম্পন্ন হলে নিচে আপনার ফোন নম্বর এবং ট্রান্সেকশন আইডি দিন।
+          </p>
+        </>
+      ) : (
+        <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FBBF24', borderRadius: '8px', padding: '12px' }}>
+          <p style={{ fontSize: '14px', color: '#92400E', fontWeight: 600, margin: 0 }}>Send money to {method.number}</p>
+          <p style={{ fontSize: '12px', color: '#92400E', marginTop: '4px', marginBottom: 0 }}>Then enter your mobile number and transaction ID below.</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const PaymentMethodDialog = ({ onClose, onPaymentSelected }) => {
   const [showForm, setShowForm] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState(null);
@@ -190,23 +260,20 @@ const PaymentMethodDialog = ({ onClose, onPaymentSelected }) => {
           <div style={{ padding: '20px', backgroundColor: method.color, color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <method.icon style={{ width: '24px', height: '24px' }} />
-              <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{method.name} Payment</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{selectedMethod === 'BKASH' ? 'Payment to bKash' : 'Send Money to ' + method.name}</h3>
             </div>
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><XMarkIcon style={{ width: '24px', height: '24px' }} /></button>
           </div>
           <div style={{ padding: '20px' }}>
-            <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FBBF24', borderRadius: '8px', padding: '12px', marginBottom: '20px' }}>
-              <p style={{ fontSize: '14px', color: '#92400E', fontWeight: 600 }}>Send money to {method.number}</p>
-              <p style={{ fontSize: '12px', color: '#92400E', marginTop: '4px' }}>Then enter your mobile number and transaction ID below.</p>
-            </div>
+            <PaymentInstructions method={method} type={selectedMethod} />
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Mobile Number</label>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>{selectedMethod === 'BKASH' ? 'আপনার বিকাশ নম্বর' : 'Mobile Number'}</label>
               <input type="tel" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} placeholder="01XXXXXXXXX"
                 style={{ width: '100%', padding: '12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
                 onFocus={(e) => e.target.style.borderColor = method.color} onBlur={(e) => e.target.style.borderColor = '#D1D5DB'} />
             </div>
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>Transaction ID</label>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>{selectedMethod === 'BKASH' ? 'ট্রান্সেকশন আইডি (TrxID)' : 'Transaction ID'}</label>
               <input type="text" value={transactionId} onChange={(e) => setTransactionId(e.target.value)} placeholder="Enter transaction ID"
                 style={{ width: '100%', padding: '12px', border: '1px solid #D1D5DB', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }}
                 onFocus={(e) => e.target.style.borderColor = method.color} onBlur={(e) => e.target.style.borderColor = '#D1D5DB'} />
@@ -231,7 +298,7 @@ const PaymentMethodDialog = ({ onClose, onPaymentSelected }) => {
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><XMarkIcon style={{ width: '24px', height: '24px' }} /></button>
         </div>
         <div style={{ padding: '20px' }}>
-          {[['BKASH','Bkash','01970102586','#E2136E'],['NAGAD','Nagad','01970102586','#F15A29'],['ROCKET','Rocket','017463246207','#00AEEF']].map(([type, label, num, color], i) => (
+          {['BKASH', 'NAGAD', 'ROCKET'].map((type, i) => { const { name: label, number: num, color } = paymentMethods[type]; return (
             <button key={type} onClick={() => setSelectedMethod(type)}
               style={{ width: '100%', padding: '16px', backgroundColor: '#F8F9FA', border: '1px solid #E0E0E0', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: i < 2 ? '12px' : '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -240,12 +307,12 @@ const PaymentMethodDialog = ({ onClose, onPaymentSelected }) => {
                 </div>
                 <div style={{ textAlign: 'left' }}>
                   <p style={{ fontSize: '16px', fontWeight: 600, color: '#1F2937' }}>{label}</p>
-                  <p style={{ fontSize: '12px', color: '#6B7280' }}>Send to: {num}</p>
+                  <p style={{ fontSize: '12px', color: '#6B7280' }}>{type === 'BKASH' ? 'Payment to: ' : 'Send to: '}{num}</p>
                 </div>
               </div>
               <ArrowRightIcon style={{ width: '20px', height: '20px', color: '#9CA3AF' }} />
             </button>
-          ))}
+          ); })}
           <button onClick={onClose} style={{ width: '100%', padding: '12px', backgroundColor: '#F3F4F6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
         </div>
       </div>
@@ -367,13 +434,9 @@ function CheckoutPageContent() {
   const handlePaymentSelect = (paymentType, details = '') => { setSelectedPaymentMethod({ type: paymentType, details }); setShowPaymentDialog(false); };
 
   const getPaymentString = () => {
-    switch (selectedPaymentMethod.type) {
-      case PaymentType.COD:    return 'COD';
-      case PaymentType.BKASH:  return "Bkash,01970102586," + selectedPaymentMethod.details;
-      case PaymentType.NAGAD:  return "Nagad,01970102586," + selectedPaymentMethod.details;
-      case PaymentType.ROCKET: return "Rocket,017463246207," + selectedPaymentMethod.details;
-      default: return 'COD';
-    }
+    const m = paymentMethods[selectedPaymentMethod.type];
+    if (selectedPaymentMethod.type === PaymentType.COD || !m) return 'COD';
+    return m.name + "," + m.number + "," + selectedPaymentMethod.details;
   };
 
   const getPaymentDisplayText = () => {
