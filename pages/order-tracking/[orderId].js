@@ -4,14 +4,14 @@ import { useRouter } from 'next/router';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
-import { doc, getDoc, onSnapshot, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import {
   ArrowLeftIcon, PhoneIcon, ClockIcon, CheckIcon,
   ExclamationTriangleIcon, TruckIcon, FireIcon, UserIcon,
 } from '@heroicons/react/24/solid';
 import {
-  TRACKING_STAGES, computeProgress, computeEtaEstimate,
+  TRACKING_STAGES, computeProgress,
 } from '../../lib/orderTracking';
 
 const taka = String.fromCharCode(2547);
@@ -51,7 +51,7 @@ const CancelConfirmDialog = ({ onConfirm, onCancel }) => (
 );
 
 // --- Hero header ---
-const HeroHeader = ({ order, activeStage, isCancelled, etaEstimate }) => {
+const HeroHeader = ({ order, activeStage, isCancelled }) => {
   let gradient = 'linear-gradient(145deg, #DC0C25 0%, #A50018 100%)';
   let headline = 'Order Placed';
   let sub = 'Sending your order to the restaurant';
@@ -104,26 +104,6 @@ const HeroHeader = ({ order, activeStage, isCancelled, etaEstimate }) => {
       <h1 style={{ color: 'white', fontSize: '22px', fontWeight: 700, margin: 0 }}>{headline}</h1>
       <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '13px', marginTop: '4px', maxWidth: '320px' }}>{sub}</p>
 
-      {etaEstimate && (
-        <>
-          <div style={{
-            marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '8px',
-            backgroundColor: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.35)',
-            borderRadius: '24px', padding: '8px 16px'
-          }}>
-            <ClockIcon style={{ width: '16px', height: '16px', color: 'white' }} />
-            <span style={{ color: 'white', fontSize: '14px', fontWeight: 700 }}>
-              Arriving in {etaEstimate.lowerMin}-{etaEstimate.upperMin} min
-            </span>
-          </div>
-          {etaEstimate.extended && (
-            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '11px', fontStyle: 'italic', margin: '6px 0 0 0' }}>
-              Kitchen&apos;s a bit busier than usual — estimate updated
-            </p>
-          )}
-        </>
-      )}
-
       <div style={{
         marginTop: '10px', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: '20px',
         padding: '6px 14px', color: 'white', fontSize: '12px', fontWeight: 600
@@ -137,7 +117,7 @@ const HeroHeader = ({ order, activeStage, isCancelled, etaEstimate }) => {
 };
 
 // --- Cooking animation row ---
-const CookingRow = ({ etaEstimate }) => (
+const CookingRow = () => (
   <div style={{ backgroundColor: '#FFF3E0', borderRadius: '14px', padding: '10px 14px', marginTop: '10px' }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
       <FireIcon style={{ width: '20px', height: '20px', color: '#EF6C00', animation: 'ot-bounce 0.5s ease-in-out infinite alternate' }} />
@@ -148,18 +128,6 @@ const CookingRow = ({ etaEstimate }) => (
         </span>
       </span>
     </div>
-    {etaEstimate && (
-      <>
-        <p style={{ fontSize: '12px', fontWeight: 600, color: '#B86200', margin: '6px 0 0 30px' }}>
-          Estimated delivery: {etaEstimate.lowerMin}-{etaEstimate.upperMin} min
-        </p>
-        {etaEstimate.extended && (
-          <p style={{ fontSize: '11px', fontStyle: 'italic', color: 'rgba(184,98,0,0.85)', margin: '2px 0 0 30px' }}>
-            Running a little longer than usual today
-          </p>
-        )}
-      </>
-    )}
     <style>{`
       @keyframes ot-bounce { from { transform: translateY(0); } to { transform: translateY(-4px); } }
       @keyframes ot-dot-fade { 0%, 20% { opacity: 0; } 50%, 100% { opacity: 1; } }
@@ -325,10 +293,6 @@ function OrderTrackingPageContent() {
           serviceCharge: Number(data.serviceCharge) || 0,
           riderName: data.riderName || '',
           riderId: data.riderId || '',
-          // Persisted once, the first time any viewer observes this order
-          // enter "Preparing" — lets the ETA countdown survive navigation,
-          // page reloads, and being viewed from another device.
-          preparingStartedAt: data.preparingStartedAt instanceof Timestamp ? data.preparingStartedAt : null,
         });
       }
     });
@@ -356,38 +320,12 @@ function OrderTrackingPageContent() {
     }).catch(() => {});
   }, [user]);
 
-  // Progress is computed defensively even before `order` loads, so the
-  // hook below (which depends on it) can always run in the same order.
-  const progress = order ? computeProgress(order, nowMillis) : { activeStage: null, reachedStages: new Set() };
-
-  // The ETA countdown should only start ticking once the order is actually
-  // being prepared — not from the moment it was placed, and it must survive
-  // navigating away, reloading the page, or being viewed from another
-  // device. So instead of local state, we persist it to Firestore the very
-  // first time ANY viewer observes this order enter PREPARING, then everyone
-  // just reads that same timestamp back. The `activeStage` dependency means
-  // this effect body only runs when the stage changes (not every tick), and
-  // the guard skips the write entirely once `preparingStartedAt` is already
-  // set — including right after our own write comes back through onSnapshot.
-  useEffect(() => {
-    if (!orderId || !order) return;
-    if (progress.activeStage === 'PREPARING' && !order.preparingStartedAt) {
-      updateDoc(doc(db, 'orders', orderId), { preparingStartedAt: Timestamp.now() }).catch(() => {
-        // Another viewer may have already set it — safe to ignore.
-      });
-    }
-  }, [progress.activeStage, order?.preparingStartedAt, orderId]);
-
   if (isLoading || !order) {
     return <LoadingSpinner />;
   }
 
   const isCancelled = (order.orderStatus || '').toLowerCase() === 'cancelled';
-  const { activeStage, reachedStages } = progress;
-
-  const preparingStartMillis = order.preparingStartedAt ? order.preparingStartedAt.toDate().getTime() : null;
-  const showEta = !isCancelled && activeStage === 'PREPARING' && preparingStartMillis !== null;
-  const etaEstimate = showEta ? computeEtaEstimate(order.id, preparingStartMillis, nowMillis) : null;
+  const { activeStage, reachedStages } = computeProgress(order, nowMillis);
 
   // 3-minute cancellation window, reactive via the ticker.
   const createdMillis = order.createdAt.toDate().getTime();
@@ -422,20 +360,20 @@ function OrderTrackingPageContent() {
         <h1 style={{ fontSize: '17px', fontWeight: 700, color: '#1F2937', margin: 0 }}>Track Order</h1>
       </div>
 
-      <HeroHeader order={order} activeStage={activeStage} isCancelled={isCancelled} etaEstimate={etaEstimate} />
+      <HeroHeader order={order} activeStage={activeStage} isCancelled={isCancelled} />
 
       <div style={{ maxWidth: '560px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '20px' }}>
         {isCancelled ? (
           <CancelledCard userPhone={userPhone} />
         ) : (
           <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '20px', margin: '0 16px' }}>
-            {TRACKING_STAGES.map((stageDef, index) => {
+            {TRACKING_STAGES.map((stageDef) => {
               const state = stageDef.key === activeStage ? 'ACTIVE' : (reachedStages.has(stageDef.key) ? 'DONE' : 'PENDING');
               if (state === 'PENDING') return null; // hidden until reached
               const isLast = state === 'ACTIVE';
               return (
                 <TimelineStepRow key={stageDef.key} stageDef={stageDef} state={state} isLast={isLast}>
-                  {stageDef.key === 'PREPARING' && state === 'ACTIVE' && <CookingRow etaEstimate={etaEstimate} />}
+                  {stageDef.key === 'PREPARING' && state === 'ACTIVE' && <CookingRow />}
                   {stageDef.key === 'ACCEPTED' && state !== 'PENDING' && <RiderCard order={order} riderPhone={riderPhone} />}
                   {stageDef.key === 'ON_THE_WAY' && state === 'ACTIVE' && <OnTheWayRow />}
                 </TimelineStepRow>
