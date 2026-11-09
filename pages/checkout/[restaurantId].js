@@ -6,7 +6,7 @@ import { db } from '../../firebase/config';
 import { doc, getDoc, collection, query, where, addDoc, Timestamp, getDocs } from 'firebase/firestore';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { 
+import {
   ArrowLeftIcon, MapPinIcon, CheckCircleIcon, ExclamationCircleIcon,
   BanknotesIcon, CreditCardIcon, XMarkIcon, ArrowRightIcon, CheckIcon, CurrencyBangladeshiIcon,
   PencilSquareIcon, DocumentTextIcon, ClipboardDocumentIcon
@@ -40,8 +40,6 @@ const PriceRow = ({ label, amount, isTotal = false }) => (
   </div>
 );
 
-// Small pill button shown next to the "Order Summary" title — opens the
-// UserNote dialog. Turns green with a checkmark once a userNote is saved.
 const EditUserNoteButton = ({ hasUserNote, onClick }) => (
   <button
     onClick={onClick}
@@ -57,7 +55,6 @@ const EditUserNoteButton = ({ hasUserNote, onClick }) => (
   </button>
 );
 
-// Dialog for adding / editing / removing the userNote attached to this order.
 const EditUserNoteDialog = ({ initialUserNote, onDismiss, onSave }) => {
   const [userNoteText, setUserNoteText] = useState(initialUserNote || '');
   const maxLength = 200;
@@ -128,14 +125,12 @@ const EditUserNoteDialog = ({ initialUserNote, onDismiss, onSave }) => {
   );
 };
 
-// Cute rainy-day warning popup — appears when rainyCharge > 0
 const RainyDayDialog = ({ rainyCharge, onClose }) => {
   const taka = String.fromCharCode(2547);
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px', animation: 'rainyFade 0.25s ease-out' }}>
       <div style={{ backgroundColor: 'white', borderRadius: '28px', width: '100%', maxWidth: '360px', overflow: 'hidden', boxShadow: '0 24px 48px rgba(0,0,0,0.25)', animation: 'rainyPop 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}>
         <div style={{ padding: '28px 24px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-          {/* Floating emoji badge */}
           <div style={{ width: '96px', height: '96px', borderRadius: '9999px', background: 'linear-gradient(180deg, #E3F2FD 0%, #BBDEFB 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
             <span style={{ fontSize: '46px', display: 'inline-block', animation: 'rainyFloat 1.4s ease-in-out infinite' }}>{'\uD83C\uDF27\uFE0F'}</span>
           </div>
@@ -143,7 +138,6 @@ const RainyDayDialog = ({ rainyCharge, onClose }) => {
           <p style={{ fontSize: '14px', color: '#666666', lineHeight: '20px', marginBottom: '18px' }}>
             {"Due to rainy weather in your area, a small extra charge helps our delivery heroes reach you safely through the rain. \uD83D\uDE4F"}
           </p>
-          {/* Charge highlight chip */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#E3F2FD', borderRadius: '14px', padding: '10px 18px', marginBottom: '22px' }}>
             <span style={{ fontSize: '14px', fontWeight: 500, color: '#1565C0' }}>Rainy Day Charge</span>
             <span style={{ fontSize: '16px', fontWeight: 700, color: '#0D47A1' }}>{taka}{rainyCharge.toFixed(0)}</span>
@@ -172,7 +166,6 @@ const OrderSentOverlay = ({ onComplete }) => {
   );
 };
 
-// Copy-to-clipboard button for the payment number
 const CopyNumberButton = ({ number, color }) => {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
@@ -200,7 +193,6 @@ const CopyNumberButton = ({ number, color }) => {
   );
 };
 
-// Number card + instructions. bKash = "Payment" (Bangla guide), Nagad/Rocket = "Send Money"
 const PaymentInstructions = ({ method, type }) => {
   const isBkash = type === 'BKASH';
   return (
@@ -328,6 +320,7 @@ function CheckoutPageContent() {
 
   const [userProfile, setUserProfile] = useState(null);
   const [deliveryCharge, setDeliveryCharge] = useState(null);
+  const [hiddenDeliveryCharge, setHiddenDeliveryCharge] = useState(0);
   const [serviceCharge, setServiceCharge] = useState(null);
   const [rainyCharge, setRainyCharge] = useState(0);
   const [showRainyDialog, setShowRainyDialog] = useState(false);
@@ -339,19 +332,15 @@ function CheckoutPageContent() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState({ type: PaymentType.COD, details: '' });
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
-  // UserNote states — the optional note the customer can attach to the order
   const [userNote, setUserNote] = useState('');
   const [showUserNoteDialog, setShowUserNoteDialog] = useState(false);
 
-  // The Firestore doc id of the order just placed — used to route to its
-  // tracking page once the "Order Sent" animation finishes.
   const [placedOrderId, setPlacedOrderId] = useState(null);
-
-  // KEY FIX: prevents empty-cart guard from redirecting to /cart after order is placed
   const orderPlacedRef = useRef(false);
 
   const itemsForRestaurant = useMemo(() => {
     if (!restaurantId) return [];
+    if (restaurantId === 'yumzy_store') return Object.values(cart);
     return Object.values(cart).filter(item => item.restaurantId === restaurantId);
   }, [cart, restaurantId]);
 
@@ -361,10 +350,9 @@ function CheckoutPageContent() {
 
   const isPreOrder = itemsForRestaurant.length > 0 && itemsForRestaurant[0].menuItem.category?.startsWith("Pre-order");
   const restaurantName = itemsForRestaurant.length > 0
-    ? (restaurantId === 'yumzy_store' ? 'Yumzy Store' : itemsForRestaurant[0].restaurantName)
+    ? (restaurantId === 'yumzy_store' ? (itemsForRestaurant[0].restaurantName || 'Yumzy Store') : itemsForRestaurant[0].restaurantName)
     : 'Your Order';
 
-  // Guard: only redirect to /cart if order has NOT been placed
   useEffect(() => {
     if (router.isReady && !orderPlacedRef.current && (!restaurantId || itemsForRestaurant.length === 0)) {
       router.replace('/cart');
@@ -380,56 +368,306 @@ function CheckoutPageContent() {
       .finally(() => setIsLoadingProfile(false));
   }, [user]);
 
-  useEffect(() => {
-    if (!userProfile || !restaurantId) return;
-    const calculateCharges = async () => {
-      setIsLoadingCharges(true); setError('');
-      let baseDelivery = 20.0, baseService = 5.0, baseRainy = 0.0, additionalDelivery = 0.0, additionalService = 0.0;
-      const { baseLocation, subLocation } = userProfile;
-      if (!baseLocation || !subLocation) {
-        setError("Please complete your location details in your profile.");
-        setDeliveryCharge(baseDelivery); setServiceCharge(baseService); setRainyCharge(0); setIsLoadingCharges(false); return;
+
+useEffect(() => {
+  if (!userProfile) return;
+
+  let cancelled = false;
+
+  const calculateCharges = async () => {
+    setIsLoadingCharges(true);
+    setError('');
+
+    let baseDelivery = 20;
+    let baseService = 5;
+    let baseRainy = 0;
+    let additionalDelivery = 0;
+    let additionalService = 0;
+    let totalRestaurantHiddenDelivery = 0;
+
+    const { baseLocation, subLocation } = userProfile;
+
+    if (!baseLocation || !subLocation) {
+      setError('Please complete your location details in your profile.');
+      setDeliveryCharge(baseDelivery);
+      setServiceCharge(baseService);
+      setRainyCharge(0);
+      setIsLoadingCharges(false);
+      return;
+    }
+
+    try {
+      // Collect all restaurant identifiers
+      const rawKeys = itemsForRestaurant
+        .flatMap(item => [
+          item.restaurantId,
+          item.restaurantName,
+          item.miniResName
+        ])
+        .filter(key =>
+          key &&
+          key !== 'yumzy_store' &&
+          key !== 'Yumzy Store' &&
+          key !== 'Your Order'
+        );
+
+      const uniqueKeys = [...new Set(rawKeys)];
+
+      // Resolve restaurant using parallel Firestore requests
+      const resolveVendor = async (key) => {
+        const [miniById, restaurantById] = await Promise.all([
+          getDoc(doc(db, 'mini_restaurants', key)),
+          getDoc(doc(db, 'restaurants', key))
+        ]);
+
+        if (miniById.exists()) return miniById;
+        if (restaurantById.exists()) return restaurantById;
+
+        const [miniByName, restaurantByName] = await Promise.all([
+          getDocs(
+            query(
+              collection(db, 'mini_restaurants'),
+              where('name', '==', key)
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, 'restaurants'),
+              where('name', '==', key)
+            )
+          )
+        ]);
+
+        if (!miniByName.empty) return miniByName.docs[0];
+        if (!restaurantByName.empty) return restaurantByName.docs[0];
+
+        return null;
+      };
+
+      // Run restaurant, location and store-item requests together
+      const [resolvedVendors, locSnap, storeItemSnaps] =
+        await Promise.all([
+          Promise.all(
+            uniqueKeys.map(async key => ({
+              key,
+              snap: await resolveVendor(key)
+            }))
+          ),
+
+          getDocs(
+            query(
+              collection(db, 'locations'),
+              where('name', '==', baseLocation)
+            )
+          ),
+
+          restaurantId === 'yumzy_store'
+            ? Promise.all(
+                [
+                  ...new Set(
+                    itemsForRestaurant.map(item => {
+                      const id = item.menuItem.id;
+                      return id.includes('_')
+                        ? id.split('_')[0]
+                        : id;
+                    })
+                  )
+                ].map(id =>
+                  getDoc(doc(db, 'store_items', id)).catch(err => {
+                    console.error(
+                      'Could not load store item charge:',
+                      err
+                    );
+                    return null;
+                  })
+                )
+              )
+            : Promise.resolve([])
+        ]);
+
+      // Fallback: scan mini_restaurants only once if needed
+      const unresolved = resolvedVendors.filter(
+        result => !result.snap
+      );
+
+      if (unresolved.length > 0) {
+        const allMini = await getDocs(
+          collection(db, 'mini_restaurants')
+        );
+
+        for (const result of unresolved) {
+          const cleanName = result.key
+            .split('(')[0]
+            .trim()
+            .toLowerCase();
+
+          const match = allMini.docs.find(d => {
+            const name = (d.data().name || '').toLowerCase();
+
+            return (
+              name &&
+              (
+                name.includes(cleanName) ||
+                cleanName.includes(name)
+              )
+            );
+          });
+
+          if (match) {
+            result.snap = match;
+          }
+        }
       }
-      try {
-        const locSnap = await getDocs(query(collection(db, 'locations'), where('name', '==', baseLocation)));
-        if (!locSnap.empty) {
-          const locData = locSnap.docs[0].data();
-          // Rainy day extra charge for this base location.
-          // Applies only when the base location name matches (which it does here, since the query filters by name == baseLocation).
-          const rainyVal = Number(locData.rainyCharge);
-          if (!isNaN(rainyVal)) baseRainy = rainyVal;
-          const subIndex = (locData.subLocations || []).indexOf(subLocation);
-          if (subIndex !== -1) {
-            const dArr = locData[isPreOrder ? 'deliveryCharge' : 'deliveryChargeYumzy'] || [];
-            const sArr = locData[isPreOrder ? 'serviceCharge' : 'serviceChargeYumzy'] || [];
-            if (subIndex < dArr.length) { const n = Number(dArr[subIndex]); if (!isNaN(n)) baseDelivery = n; }
-            if (subIndex < sArr.length) { const n = Number(sArr[subIndex]); if (!isNaN(n)) baseService = n; }
+
+      // Count each restaurant's hidden delivery charge only once
+      const processedVendors = new Set();
+
+      for (const { snap } of resolvedVendors) {
+        if (!snap || !snap.exists()) continue;
+
+        const vendorKey = `${snap.ref.parent.path}/${snap.id}`;
+
+        if (processedVendors.has(vendorKey)) continue;
+
+        processedVendors.add(vendorKey);
+
+        const data = snap.data();
+
+        const configuredCharge = Number(
+          data.hiddenDeliveryCharge ??
+          data.deliveryChargeHidden ??
+          0
+        );
+
+        if (
+          Number.isFinite(configuredCharge) &&
+          configuredCharge > 0
+        ) {
+          totalRestaurantHiddenDelivery += configuredCharge;
+        }
+      }
+
+      // Location-based delivery, service and rainy charges
+      if (!locSnap.empty) {
+        const locData = locSnap.docs[0].data();
+
+        const rainyVal = Number(locData.rainyCharge);
+
+        if (Number.isFinite(rainyVal)) {
+          baseRainy = rainyVal;
+        }
+
+        const subIndex = (
+          locData.subLocations || []
+        ).indexOf(subLocation);
+
+        if (subIndex !== -1) {
+          const dArr =
+            locData[
+              isPreOrder
+                ? 'deliveryCharge'
+                : 'deliveryChargeYumzy'
+            ] || [];
+
+          const sArr =
+            locData[
+              isPreOrder
+                ? 'serviceCharge'
+                : 'serviceChargeYumzy'
+            ] || [];
+
+          if (subIndex < dArr.length) {
+            const value = Number(dArr[subIndex]);
+
+            if (Number.isFinite(value)) {
+              baseDelivery = value;
+            }
+          }
+
+          if (subIndex < sArr.length) {
+            const value = Number(sArr[subIndex]);
+
+            if (Number.isFinite(value)) {
+              baseService = value;
+            }
           }
         }
-        if (restaurantId === 'yumzy_store') {
-          const baseIds = [...new Set(itemsForRestaurant.map(item => { const id = item.menuItem.id; return id.includes('_') ? id.split('_')[0] : id; }))];
-          for (const bid of baseIds) {
-            try {
-              const snap = await getDoc(doc(db, 'store_items', bid));
-              if (snap.exists()) { additionalDelivery += snap.data().additionalDeliveryCharge || 0; additionalService += snap.data().additionalServiceCharge || 0; }
-            } catch(e) { console.error(e); }
-          }
+      }
+
+      // Add Yumzy Store item-specific charges
+      for (const snap of storeItemSnaps) {
+        if (snap?.exists()) {
+          const data = snap.data();
+
+          additionalDelivery +=
+            Number(data.additionalDeliveryCharge) || 0;
+
+          additionalService +=
+            Number(data.additionalServiceCharge) || 0;
         }
-        setDeliveryCharge(baseDelivery + additionalDelivery);
-        setServiceCharge(baseService + additionalService);
-        setRainyCharge(baseRainy);
-        setShowRainyDialog(baseRainy > 0);
-      } catch(err) {
-        console.error("Error calculating charges:", err);
-        setError("Could not calculate delivery charges. Using defaults.");
-        setDeliveryCharge(baseDelivery + additionalDelivery);
-        setServiceCharge(baseService + additionalService);
-        setRainyCharge(baseRainy);
-        setShowRainyDialog(baseRainy > 0);
-      } finally { setIsLoadingCharges(false); }
-    };
-    calculateCharges();
-  }, [userProfile, restaurantId, isPreOrder]);
+      }
+
+      if (cancelled) return;
+
+      setHiddenDeliveryCharge(totalRestaurantHiddenDelivery);
+
+      setDeliveryCharge(
+        baseDelivery +
+        additionalDelivery +
+        totalRestaurantHiddenDelivery
+      );
+
+      setServiceCharge(
+        baseService + additionalService
+      );
+
+      setRainyCharge(baseRainy);
+      setShowRainyDialog(baseRainy > 0);
+
+    } catch (err) {
+      console.error('Error calculating charges:', err);
+
+      if (cancelled) return;
+
+      setError(
+        'Could not calculate delivery charges. Using defaults.'
+      );
+
+      setHiddenDeliveryCharge(totalRestaurantHiddenDelivery);
+
+      setDeliveryCharge(
+        baseDelivery +
+        additionalDelivery +
+        totalRestaurantHiddenDelivery
+      );
+
+      setServiceCharge(
+        baseService + additionalService
+      );
+
+      setRainyCharge(baseRainy);
+      setShowRainyDialog(baseRainy > 0);
+
+    } finally {
+      if (!cancelled) {
+        setIsLoadingCharges(false);
+      }
+    }
+  };
+
+  calculateCharges();
+
+  return () => {
+    cancelled = true;
+  };
+
+}, [
+  userProfile,
+  restaurantId,
+  isPreOrder,
+  itemsForRestaurant
+]);
+
 
   const handlePaymentSelect = (paymentType, details = '') => { setSelectedPaymentMethod({ type: paymentType, details }); setShowPaymentDialog(false); };
 
@@ -459,15 +697,14 @@ function CheckoutPageContent() {
       userPhone: userProfile.phone || 'N/A', userBaseLocation: userProfile.baseLocation || 'N/A',
       userSubLocation: userProfile.subLocation || 'N/A', building: userProfile.building || '',
       floor: userProfile.floor || '', room: userProfile.room || '',
-      restaurantId, restaurantName, totalPrice: finalTotal, deliveryCharge, serviceCharge, rainyCharge,
+      restaurantId, restaurantName, totalPrice: finalTotal, deliveryCharge, hiddenDeliveryCharge, serviceCharge, rainyCharge,
       items: orderItems, orderStatus: "Pending", createdAt: Timestamp.now(),
       orderType, preOrderCategory: orderType === "PreOrder" ? (itemsForRestaurant[0]?.menuItem.category || '') : "",
       payment: getPaymentString(),
-      userNote: userNote.trim() // NEW: optional note from the customer
+      userNote: userNote.trim()
     };
     try {
       const docRef = await addDoc(collection(db, 'orders'), newOrder);
-      // Set ref BEFORE clearing cart — prevents the empty-cart guard from redirecting to /cart
       orderPlacedRef.current = true;
       setPlacedOrderId(docRef.id);
       clearCartForRestaurant(restaurantId);
@@ -479,7 +716,6 @@ function CheckoutPageContent() {
     }
   };
 
-  // After success animation → go straight to that order's tracking page
   const handleOrderSentComplete = () => {
     setShowOrderSent(false);
     if (placedOrderId) {
@@ -545,7 +781,6 @@ function CheckoutPageContent() {
                 </div>
               ))}
 
-              {/* UserNote preview, shown only when a userNote has been added */}
               {userNote && (
                 <div
                   onClick={() => setShowUserNoteDialog(true)}
