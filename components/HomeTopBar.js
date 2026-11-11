@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MapPinIcon, BellIcon, HeartIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { homeCategories, useHeroSlide, HeroStyles, HeroBackground, HeroSlideContent } from './HeroSlides';
 
 const SearchBar = ({ query, onQueryChange, onFocusChange, isDesktop }) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -15,7 +16,7 @@ const SearchBar = ({ query, onQueryChange, onFocusChange, isDesktop }) => {
       </div>
       <input
         type="text"
-        placeholder="Search restaurants, foods, shops..."
+        placeholder="Search restaurants or food"
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
         onFocus={() => { setIsFocused(true); onFocusChange(true); }}
@@ -27,7 +28,7 @@ const SearchBar = ({ query, onQueryChange, onFocusChange, isDesktop }) => {
           paddingRight: query ? '40px' : '16px',
           fontSize: '14px',
           backgroundColor: isDesktop ? '#F9FAFB' : 'white',
-          borderRadius: '10px',
+          borderRadius: isDesktop ? '10px' : '14px',
           border: isFocused ? '1.5px solid #DC0C25' : `1.5px solid ${isDesktop ? '#E5E7EB' : 'transparent'}`,
           outline: 'none',
           boxShadow: isFocused ? '0 0 0 3px rgba(220,12,37,0.08)' : 'none',
@@ -54,12 +55,23 @@ const SearchBar = ({ query, onQueryChange, onFocusChange, isDesktop }) => {
 
 export default function HomeTopBar({
   userProfile, searchQuery, onSearchQueryChange,
-  onNotificationClick, onFavoriteClick
+  onNotificationClick, onFavoriteClick,
+  onCategoryClick, // (categoryId, categoryName) => void, called when the banner is tapped
+  hideBanner = false, // true while search results are showing
 }) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
+  // Animated banner (mobile)
+  const slideIndex = useHeroSlide();
+  const slide = homeCategories[slideIndex];
+
+  const locationText = userProfile
+    ? [userProfile.subLocation, userProfile.baseLocation].filter(Boolean).join(', ') || 'Set your location'
+    : '...';
+
   return (
     <>
+      <HeroStyles />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Keania+One&display=swap');
         .foodish-desktop-header { display: none; }
@@ -140,61 +152,80 @@ export default function HomeTopBar({
         </div>
       </header>
 
-      {/* ── MOBILE HEADER ── */}
-      <header className="foodish-mobile-header" style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'linear-gradient(160deg, #DC0C25 0%, #B70314 100%)',
-        flexDirection: 'column',
-        borderBottomLeftRadius: '22px',
-        borderBottomRightRadius: '22px',
-        boxShadow: '0 4px 20px rgba(220,12,37,0.3)',
-        overflow: 'hidden',
-      }}>
-        {/* Top row */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 16px 10px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+      {/* ── MOBILE TOP BAR ──
+          Same design as the Android app:
+          1) a banner that scrolls away with the page (location row + animated slides)
+          2) the search bar, which stays pinned to the top while scrolling            */}
+      <div
+        className="foodish-mobile-header"
+        style={{
+          position: 'relative',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          // The banner folds away while the user is searching, to leave room for results
+          maxHeight: hideBanner ? '0px' : '200px',
+          transition: 'max-height 0.25s ease',
+        }}
+      >
+        <HeroBackground index={slideIndex} />
+
+        <div style={{ position: 'relative', padding: '10px 16px 8px' }}>
+          {/* Location + buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
-              width: '32px', height: '32px', borderRadius: '8px',
-              backgroundColor: 'rgba(255,255,255,0.2)',
+              width: '34px', height: '34px', borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.18)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
             }}>
               <MapPinIcon style={{ width: '18px', height: '18px', color: 'white' }} />
             </div>
-            <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)', margin: 0, fontWeight: 500 }}>
-                Delivering to
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <p style={{ fontSize: '10px', lineHeight: '12px', color: 'rgba(255,255,255,0.85)', margin: 0 }}>
+                Deliver to
               </p>
               <p style={{
-                fontSize: '14px', color: 'white', margin: 0, fontWeight: 700,
+                fontSize: '13px', lineHeight: '16px', color: 'white', margin: 0, fontWeight: 600,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
-                {userProfile?.subLocation || userProfile?.baseLocation || '...'}
+                {locationText}
               </p>
             </div>
-          </div>
-          <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-            <MobileIconBtn onClick={onFavoriteClick}>
-              <HeartIcon style={{ width: '20px', height: '20px', color: 'white' }} />
+            <MobileIconBtn onClick={onFavoriteClick} label="Favorites">
+              <HeartIcon style={{ width: '18px', height: '18px', color: 'white' }} />
             </MobileIconBtn>
-            <MobileIconBtn onClick={onNotificationClick}>
-              <BellIcon style={{ width: '20px', height: '20px', color: 'white' }} />
+            <MobileIconBtn onClick={onNotificationClick} label="Orders & Notifications">
+              <BellIcon style={{ width: '18px', height: '18px', color: 'white' }} />
             </MobileIconBtn>
           </div>
+
+          {/* Animated slides */}
+          <div style={{ marginTop: '6px' }}>
+            <HeroSlideContent index={slideIndex} onCategoryClick={onCategoryClick} size="compact" />
+          </div>
         </div>
-        {/* Search row */}
-        <div style={{ padding: '0 16px 16px' }}>
-          <SearchBar
-            query={searchQuery}
-            onQueryChange={onSearchQueryChange}
-            onFocusChange={setIsSearchFocused}
-            isDesktop={false}
-          />
-        </div>
-      </header>
+      </div>
+
+      {/* Search bar: pinned. Its colour follows the banner so the two look like one piece. */}
+      <div
+        className="foodish-mobile-header"
+        style={{
+          position: 'sticky', top: 0, zIndex: 100,
+          backgroundColor: slide.colorBottom,
+          transition: 'background-color 0.8s ease',
+          padding: '8px 16px 12px',
+          borderBottomLeftRadius: '24px',
+          borderBottomRightRadius: '24px',
+          boxShadow: '0 6px 16px rgba(0,0,0,0.12)',
+        }}
+      >
+        <SearchBar
+          query={searchQuery}
+          onQueryChange={onSearchQueryChange}
+          onFocusChange={setIsSearchFocused}
+          isDesktop={false}
+        />
+      </div>
     </>
   );
 }
@@ -219,13 +250,15 @@ function IconBtn({ onClick, label, children }) {
   );
 }
 
-function MobileIconBtn({ onClick, children }) {
+function MobileIconBtn({ onClick, label, children }) {
   return (
     <button
       onClick={onClick}
+      aria-label={label}
       style={{
-        padding: '8px', backgroundColor: 'rgba(255,255,255,0.15)',
-        border: 'none', borderRadius: '8px', cursor: 'pointer',
+        width: '34px', height: '34px', flexShrink: 0,
+        backgroundColor: 'rgba(255,255,255,0.18)',
+        border: 'none', borderRadius: '50%', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >

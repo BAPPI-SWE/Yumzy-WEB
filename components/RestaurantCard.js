@@ -1,151 +1,208 @@
-import { useState } from 'react';
-import { HeartIcon as HeartOutline } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartSolid, ClockIcon, CheckBadgeIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
+// components/RestaurantCard.js
+//
+// Restaurant card on the home page: photo on the left, details and a
+// "View Menu" pill on the right. Same design as the Android app.
 
-const RestaurantImage = ({ src, alt }) => (
-  <img
-    src={src || '/placeholder-restaurant.png'}
-    alt={alt}
-    style={{
-      position: 'absolute',
-      top: 0, left: 0, right: 0, bottom: 0,
-      width: '100%', height: '100%',
-      objectFit: 'cover',
-    }}
-    loading="lazy"
-  />
-);
+import { useState } from 'react';
+import { HeartIcon as HeartOutline, ClockIcon } from '@heroicons/react/24/outline';
+import { HeartIcon as HeartSolid, CheckBadgeIcon, StarIcon } from '@heroicons/react/24/solid';
+
+// Shown when a restaurant has no "deliveryTime" field in Firestore.
+// Set this to your real typical delivery time.
+const DEFAULT_DELIVERY_TIME = '20–30 min';
+
+export function RestaurantCardStyles() {
+  return (
+    <style>{`
+      .fd-rest-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-width: 0;
+        padding: 8px;
+        background-color: white;
+        border: none;
+        border-radius: 18px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+        text-align: left;
+        font-family: inherit;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+      .fd-rest-card:hover  { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(0,0,0,0.11); }
+      .fd-rest-card:active { transform: scale(0.98); }
+      .fd-rest-card.is-closed { cursor: not-allowed; }
+      .fd-rest-card.is-closed:hover { transform: none; box-shadow: 0 4px 14px rgba(0,0,0,0.07); }
+
+      .fd-rest-photo {
+        position: relative;
+        flex-shrink: 0;
+        width: 122px;
+        height: 104px;
+        border-radius: 14px;
+        overflow: hidden;
+        background-color: #F1F1F4;
+      }
+      .fd-rest-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+      .fd-rest-body {
+        flex: 1;
+        min-width: 0;
+        height: 104px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .fd-rest-line { display: flex; align-items: center; min-width: 0; }
+      .fd-rest-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+      @media (min-width: 1024px) {
+        .fd-rest-card { padding: 10px; gap: 14px; border-radius: 20px; }
+        .fd-rest-photo { width: 140px; height: 116px; border-radius: 16px; }
+        .fd-rest-body { height: 116px; }
+      }
+    `}</style>
+  );
+}
 
 export default function RestaurantCard({ restaurant, onClick }) {
   const [isFavorite, setIsFavorite] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isFavHovered, setIsFavHovered] = useState(false);
 
-  const isPersonalCare = (restaurant.parentCategory || '').toLowerCase() === 'personal_care';
   const isClosed = restaurant.type === 'MINI' && restaurant.open !== 'yes';
+  const isPreOrder = !isClosed && (restaurant.parentCategory || '').toLowerCase() === 'personal_care';
+  const hasRating = typeof restaurant.rating === 'number';
+
+  const handleKeyDown = (e) => {
+    if (isClosed) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick && onClick();
+    }
+  };
 
   return (
     <div
-      onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{
-        backgroundColor: 'white',
-        borderRadius: '16px',
-        boxShadow: isHovered
-          ? '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)'
-          : '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
-        overflow: 'hidden',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
-      }}
+      role="button"
+      tabIndex={isClosed ? -1 : 0}
+      aria-disabled={isClosed}
+      aria-label={`${restaurant.name}${isClosed ? ', closed' : ''}`}
+      className={`fd-rest-card${isClosed ? ' is-closed' : ''}`}
+      onClick={isClosed ? undefined : onClick}
+      onKeyDown={handleKeyDown}
     >
-      {/* Image Section */}
-      <div style={{ position: 'relative', height: '130px', width: '100%' }}>
-        <RestaurantImage src={restaurant.imageUrl} alt={restaurant.name} />
+      {/* ── Photo ── */}
+      <div className="fd-rest-photo">
+        {restaurant.imageUrl && (
+          <img src={restaurant.imageUrl} alt="" loading="lazy" />
+        )}
 
-        {/* Gradient overlay */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)',
-        }} />
-
-        {/* "Pre Order Only" tag — top-left, only for open personal_care restaurants */}
-        {isPersonalCare && !isClosed && (
+        {isClosed && (
           <div style={{
-            position: 'absolute',
-            top: '10px',
-            left: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            background: 'linear-gradient(90deg, #FF6F91, #FF3CAC)',
-            borderRadius: '20px',
-            padding: '5px 10px',
-            boxShadow: '0 4px 8px rgba(255,60,172,0.35)',
-            zIndex: 2,
+            position: 'absolute', inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <ClockIcon style={{ width: '13px', height: '13px', color: 'white', flexShrink: 0 }} />
             <span style={{
-              fontSize: '11px',
-              fontWeight: 700,
-              color: 'white',
-              letterSpacing: '0.3px',
-              whiteSpace: 'nowrap',
+              backgroundColor: 'white', color: '#1C1C1E',
+              fontSize: '12px', fontWeight: 700, lineHeight: '14px',
+              padding: '5px 12px', borderRadius: '999px',
             }}>
-              Pre Order Only
+              Closed
             </span>
           </div>
         )}
 
-        {/* Favourite button */}
-        <button
-          onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
-          onMouseEnter={() => setIsFavHovered(true)}
-          onMouseLeave={() => setIsFavHovered(false)}
-          style={{
-            position: 'absolute', top: '10px', right: '10px',
-            width: '32px', height: '32px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: isFavHovered ? 'white' : 'rgba(255,255,255,0.9)',
-            borderRadius: '9999px',
-            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
-            border: 'none', cursor: 'pointer',
-            transition: 'background-color 0.2s',
-            zIndex: 2,
-          }}
-        >
-          {isFavorite
-            ? <HeartSolid style={{ width: '20px', height: '20px', color: '#EF4444' }} />
-            : <HeartOutline style={{ width: '20px', height: '20px', color: '#4B5563' }} />
-          }
-        </button>
+        {isPreOrder && (
+          <span style={{
+            position: 'absolute', top: '6px', left: '6px',
+            backgroundColor: '#DC0C25', color: 'white',
+            fontSize: '10px', fontWeight: 700, lineHeight: '12px',
+            padding: '3px 8px', borderRadius: '999px',
+          }}>
+            Pre-order
+          </span>
+        )}
       </div>
 
-      {/* Info Section */}
-      <div style={{ padding: '14px' }}>
-        <h3 style={{
-          fontSize: '16px', fontWeight: 700, color: '#1F2937',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          margin: 0,
-        }}>
-          {restaurant.name}
-        </h3>
+      {/* ── Details ── */}
+      <div className="fd-rest-body">
+        {/* Name + verified badge + favourite */}
+        <div className="fd-rest-line">
+          <span className="fd-rest-ellipsis" style={{
+            flex: 1, fontSize: '15.5px', lineHeight: '20px', fontWeight: 700, color: '#1C1C1E',
+          }}>
+            {restaurant.name}
+          </span>
+          <CheckBadgeIcon
+            title="Verified shop"
+            style={{ width: '16px', height: '16px', color: '#FFA726', flexShrink: 0, marginLeft: '4px' }}
+          />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
+            aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            aria-pressed={isFavorite}
+            style={{
+              background: 'none', border: 'none', padding: 0, marginLeft: '6px',
+              cursor: 'pointer', display: 'flex', flexShrink: 0,
+              transform: isFavorite ? 'scale(1.15)' : 'scale(1)',
+              transition: 'transform 0.2s cubic-bezier(0.3, 1.6, 0.5, 1)',
+            }}
+          >
+            {isFavorite
+              ? <HeartSolid style={{ width: '22px', height: '22px', color: '#DC0C25' }} />
+              : <HeartOutline style={{ width: '22px', height: '22px', color: '#DC0C25' }} />}
+          </button>
+        </div>
 
-        {/* Cuisine */}
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          marginTop: '4px', fontSize: '14px', color: '#4B5563',
-        }}>
-          <BuildingStorefrontIcon style={{
-            width: '16px', height: '16px',
-            marginRight: '6px', color: 'rgba(220,12,37,0.7)', flexShrink: 0,
-          }} />
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {restaurant.cuisine}
+        {/* Rating (only when a real one exists in Firestore) | delivery time */}
+        <div className="fd-rest-line" style={{ fontSize: '12.5px', lineHeight: '16px', color: '#3A3A3C' }}>
+          {hasRating && (
+            <>
+              <StarIcon style={{ width: '15px', height: '15px', color: '#FFA726', flexShrink: 0 }} />
+              <span style={{ fontWeight: 700, color: '#1C1C1E', marginLeft: '3px', fontSize: '13px' }}>
+                {restaurant.rating.toFixed(1)}
+              </span>
+              <span style={{ color: '#C7C7CC', margin: '0 8px' }}>|</span>
+            </>
+          )}
+          <ClockIcon style={{ width: '14px', height: '14px', color: '#6B6B70', flexShrink: 0 }} />
+          <span style={{ marginLeft: '4px', fontWeight: 500 }}>
+            {restaurant.deliveryTime || DEFAULT_DELIVERY_TIME}
           </span>
         </div>
 
-        {/* Badges row */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginTop: '10px', fontSize: '12px',
-        }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '4px',
-            paddingLeft: '8px', paddingRight: '8px',
-            paddingTop: '2px', paddingBottom: '2px',
-            backgroundColor: '#FEF3C7', color: '#92400E',
-            borderRadius: '9999px', fontWeight: 600,
+        {/* Cuisine + open / closed */}
+        <div className="fd-rest-line" style={{ fontSize: '12.5px', lineHeight: '16px' }}>
+          <span className="fd-rest-ellipsis" style={{ flex: 1, color: '#6B6B70' }}>
+            {restaurant.cuisine}
+          </span>
+          <span style={{
+            width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, marginLeft: '6px',
+            backgroundColor: isClosed ? '#B0B0B5' : '#2EAD5B',
+          }} />
+          <span style={{
+            marginLeft: '4px', fontSize: '11.5px', fontWeight: 600, flexShrink: 0,
+            color: isClosed ? '#6B6B70' : '#1F8A47',
           }}>
-            <CheckBadgeIcon style={{ width: '14px', height: '14px' }} />
-            <span>Verified</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#6B7280' }}>
-            <ClockIcon style={{ width: '14px', height: '14px' }} />
-            <span>Deliver in Time</span>
-          </div>
+            {isClosed ? 'Closed' : 'Open'}
+          </span>
+        </div>
+
+        {/* "View Menu" pill (the whole card is the tap target) */}
+        <div>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '5px',
+            backgroundColor: isClosed ? '#8E8E93' : '#DC0C25', color: 'white',
+            fontSize: '12px', fontWeight: 700, lineHeight: '16px',
+            padding: '5px 12px', borderRadius: '999px',
+          }}>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
+              <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" />
+            </svg>
+            {isClosed ? 'Closed now' : 'View Menu'}
+          </span>
         </div>
       </div>
     </div>

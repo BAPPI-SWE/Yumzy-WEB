@@ -1,4 +1,8 @@
 // pages/home.js
+//
+// Home page. Same layout as the Android app:
+//   Phone  : animated top bar -> offer cards -> categories -> banner slider -> restaurants
+//   Desktop: header -> (animated hero card | banner slider) -> offer cards -> categories -> restaurants
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -7,11 +11,14 @@ import { db } from '../firebase/config';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useRouter } from 'next/router';
+import { Squares2X2Icon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 
 import HomeTopBar from '../components/HomeTopBar';
+import { HeroCard } from '../components/HeroSlides';
 import OfferSlider from '../components/OfferSlider';
 import CategorySection from '../components/CategorySection';
-import RestaurantCard from '../components/RestaurantCard';
+import PromoCardsRow, { loadPromoCards, promoCardHref } from '../components/PromoCardsRow';
+import RestaurantCard, { RestaurantCardStyles } from '../components/RestaurantCard';
 import SearchResultsList from '../components/SearchResultsList';
 
 // --- Batch in-query helper ---
@@ -25,113 +32,33 @@ async function batchInQuery(collectionRef, field, values) {
   return snapshots.flatMap(snap => snap.docs);
 }
 
-// --- Closed overlay wrapper (unchanged logic) ---
-function RestaurantCardWithStatus({ restaurant, onClick }) {
-  const isClosed = restaurant.type === 'MINI' && restaurant.open !== 'yes';
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <div style={{ pointerEvents: isClosed ? 'none' : 'auto' }}>
-        <RestaurantCard
-          restaurant={restaurant}
-          onClick={isClosed ? undefined : onClick}
-        />
-      </div>
-
-      {restaurant.type === 'MINI' && !isClosed && (
-        <div style={{
-          position: 'absolute', top: 0, right: 0,
-          backgroundColor: '#16A34A', color: '#fff',
-          fontSize: '10px', fontWeight: 700,
-          padding: '4px 10px',
-          borderRadius: '0 16px 0 10px',
-          letterSpacing: '0.5px', zIndex: 2,
-        }}>
-          OPEN
-        </div>
-      )}
-
-      {isClosed && (
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundColor: 'rgba(0,0,0,0.55)',
-          borderRadius: '16px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 3, cursor: 'not-allowed',
-        }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '7px',
-            backgroundColor: '#DC0C25', color: '#fff',
-            borderRadius: '10px', padding: '9px 18px',
-            fontWeight: 700, fontSize: '14px', letterSpacing: '1px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-          }}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="white">
-              <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-            </svg>
-            CLOSED
-          </div>
-        </div>
-      )}
-    </div>
-  );
+// Reads the optional "rating" and "deliveryTime" fields of a restaurant.
+// A rating is shown only when a real number is saved in Firestore.
+function readRatingAndTime(data) {
+  return {
+    rating: typeof data.rating === 'number' ? data.rating : null,
+    deliveryTime: typeof data.deliveryTime === 'string' && data.deliveryTime.trim()
+      ? data.deliveryTime.trim()
+      : null,
+  };
 }
 
-// --- Section Header ---
-function SectionHeader({ title, count }) {
+// --- Section Header (red icon + title, optional count on the right) ---
+function SectionHeader({ title, count, Icon }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'baseline',
-      justifyContent: 'space-between', marginBottom: '20px',
+      display: 'flex', alignItems: 'center',
+      justifyContent: 'space-between', marginBottom: '14px',
     }}>
-      <h2 style={{
-        fontSize: '20px', fontWeight: 800,
-        color: '#111827', margin: 0, letterSpacing: '-0.3px',
-      }}>
-        {title}
-      </h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+        {Icon && <Icon style={{ width: '22px', height: '22px', color: '#DC0C25', flexShrink: 0 }} />}
+        <h2 className="fd-section-title">{title}</h2>
+      </div>
       {count != null && (
-        <span style={{
-          fontSize: '13px', color: '#6B7280', fontWeight: 500,
-        }}>
-          {count} available
+        <span style={{ fontSize: '13px', color: '#6B6B70', fontWeight: 500, flexShrink: 0 }}>
+          {count} places
         </span>
       )}
-    </div>
-  );
-}
-
-// --- Stats strip (desktop only) ---
-function StatsStrip() {
-  const stats = [
-    { icon: '🚀', label: 'Fast Delivery', value: '30–40 min avg' },
-    { icon: '🍽️', label: 'Restaurants', value: '50+ options' },
-    { icon: '⭐', label: 'Rating', value: '4.8 / 5.0' },
-    { icon: '🎁', label: 'Safe Delivery', value: 'On all orders' },
-  ];
-  return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(4, 1fr)',
-      gap: '12px',
-      marginBottom: '32px',
-    }}>
-      {stats.map((s) => (
-        <div key={s.label} style={{
-          backgroundColor: 'white',
-          borderRadius: '14px',
-          padding: '16px 18px',
-          border: '1px solid #F1F5F9',
-          display: 'flex', alignItems: 'center', gap: '12px',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-        }}>
-          <span style={{ fontSize: '24px' }}>{s.icon}</span>
-          <div>
-            <p style={{ fontSize: '11px', color: '#9CA3AF', margin: 0, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</p>
-            <p style={{ fontSize: '14px', color: '#1F2937', margin: 0, fontWeight: 700 }}>{s.value}</p>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
@@ -143,6 +70,7 @@ function HomePageContent() {
 
   const [userProfile, setUserProfile] = useState(null);
   const [offers, setOffers] = useState([]);
+  const [promoCards, setPromoCards] = useState([]);
   const [combinedRestaurants, setCombinedRestaurants] = useState([]);
   const [allSubCategories, setAllSubCategories] = useState([]);
   const [allMiniRestaurants, setAllMiniRestaurants] = useState([]);
@@ -158,7 +86,17 @@ function HomePageContent() {
     setShowAppDialog(false);
   };
 
-  // --- Fetch Data (identical to original) ---
+  // --- Offer cards (same for every location, so they load on their own) ---
+  useEffect(() => {
+    if (!user) return undefined;
+    let cancelled = false;
+    loadPromoCards().then((cards) => {
+      if (!cancelled) setPromoCards(cards);
+    });
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // --- Fetch Data ---
   useEffect(() => {
     if (!user) return;
 
@@ -198,10 +136,17 @@ function HomePageContent() {
           getDocs(query(collection(db, 'mini_restaurants'), where('availableLocations', 'array-contains', userLocation)))
         ]);
 
-        const fetchedOffers = offersSnap.docs.map((doc) => ({
-          imageUrl: doc.data().imageUrl || '',
-          availableLocations: doc.data().availableLocations || [],
-        }));
+        // Banners switched off in the admin app are skipped. Older banners have no
+        // "active" field and keep showing. Lower priority number shows first.
+        const fetchedOffers = offersSnap.docs
+          .map((doc) => ({
+            imageUrl: doc.data().imageUrl || '',
+            availableLocations: doc.data().availableLocations || [],
+            priority: typeof doc.data().priority === 'number' ? doc.data().priority : 0,
+            active: doc.data().active !== false,
+          }))
+          .filter((offer) => offer.active && offer.imageUrl)
+          .sort((a, b) => a.priority - b.priority);
         setOffers(fetchedOffers);
 
         // Store fetch index so equal-priority items keep their original Firestore order
@@ -214,6 +159,7 @@ function HomePageContent() {
           priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
           open: 'yes',
           parentCategory: doc.data().parentCategory || '',
+          ...readRatingAndTime(doc.data()),
           _fetchIndex: idx,
         }));
 
@@ -226,6 +172,7 @@ function HomePageContent() {
           priority: doc.data().priority != null ? parseInt(doc.data().priority, 10) : null,
           open: doc.data().open || 'no',
           parentCategory: doc.data().parentCategory || '',
+          ...readRatingAndTime(doc.data()),
           _fetchIndex: idx + 10000, // offset so MAIN and MINI indices don't collide
         }));
 
@@ -304,6 +251,9 @@ function HomePageContent() {
   const handleNotificationClick = () => router.push('/orders');
   const handleFavoriteClick = () => alert('Favorites clicked!');
 
+  const handlePromoCardClick = (card) => router.push(promoCardHref(card));
+  const handleSeeAllOffers = () => router.push('/offers');
+
   // --- Search ---
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return null;
@@ -339,15 +289,17 @@ function HomePageContent() {
     );
   }
 
+  const isSearching = searchResults !== null;
+  const showContent = !error && userProfile?.subLocation;
+
   // ─── RENDER ─────────────────────────────────────────────────────
   return (
     <>
+      <RestaurantCardStyles />
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Keania+One&display=swap');
         * { box-sizing: border-box; }
-        body { margin: 0; background-color: #F8FAFC; }
+        body { margin: 0; background-color: #FFFFFF; }
 
-        /* Desktop layout */
         .home-layout {
           display: flex;
           flex-direction: column;
@@ -360,48 +312,44 @@ function HomePageContent() {
           position: relative;
         }
 
-        /* Mobile content padding */
-        .home-main {
-          padding: 16px 16px 80px;
-          max-width: 100%;
+        /* Phone */
+        .home-main { padding: 14px 16px 80px; max-width: 100%; }
+        .home-section { margin-bottom: 20px; }
+        .fd-section-title {
+          font-size: 19px; font-weight: 800; color: #1C1C1E;
+          margin: 0; letter-spacing: -0.3px;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        /* minmax(0, 1fr) lets a card shrink, so a long name is cut with "..." instead of widening the page */
+        .restaurant-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+        .hero-offers-row { display: none; }
+        .mobile-offers { display: block; }
+
+        /* Small tablets: two cards per row */
+        @media (min-width: 640px) {
+          .restaurant-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
-        /* Desktop overrides */
+        /* Desktop */
         @media (min-width: 1024px) {
-          body { background-color: #F1F5F9; }
-          .home-main {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 32px 40px 60px;
-          }
-          .restaurant-grid {
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
-            gap: 20px !important;
-          }
-          .offers-section {
-            margin-bottom: 32px !important;
-          }
-          .stats-strip { display: grid !important; }
-          .section-divider { margin-bottom: 28px !important; }
+          body { background-color: #F8FAFC; }
+          .home-main { max-width: 1280px; margin: 0 auto; padding: 28px 40px 60px; }
+          .home-section { margin-bottom: 32px; }
+          .fd-section-title { font-size: 22px; }
+          .restaurant-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+          .hero-offers-row { display: flex; gap: 20px; align-items: stretch; }
+          .hero-offers-row > * { flex: 1; min-width: 0; }
+          /* the hero card gets the same 11:5 shape as the banner beside it */
+          .hero-card-frame { aspect-ratio: 11 / 5; }
+          .mobile-offers { display: none; }
         }
-
         @media (min-width: 1440px) {
-          .home-main { max-width: 1440px; padding: 36px 64px 80px; }
-          .restaurant-grid {
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
-          }
+          .home-main { max-width: 1440px; padding: 32px 64px 80px; }
         }
 
-        /* Hide stats on mobile */
-        .stats-strip { display: none; }
+        /* Soft blur behind the search results */
+        .content-blurred { filter: blur(4px); pointer-events: none; }
 
-        /* Smooth blur for search */
-        .content-blurred {
-          filter: blur(4px);
-          pointer-events: none;
-        }
-
-        /* WhatsApp button */
         .whatsapp-btn:hover { transform: scale(1.1) !important; }
       `}</style>
 
@@ -412,12 +360,13 @@ function HomePageContent() {
           onSearchQueryChange={setSearchQuery}
           onNotificationClick={handleNotificationClick}
           onFavoriteClick={handleFavoriteClick}
+          onCategoryClick={handleCategoryClick}
+          hideBanner={isSearching}
         />
 
         <div className="home-content-wrapper">
-          {/* Main scrollable content */}
           <div
-            className={`home-main ${searchResults !== null ? 'content-blurred' : ''}`}
+            className={`home-main ${isSearching ? 'content-blurred' : ''}`}
             style={{ transition: 'filter 0.2s' }}
           >
             {error && (
@@ -431,109 +380,49 @@ function HomePageContent() {
               </div>
             )}
 
-            {!error && userProfile?.subLocation && (
+            {showContent && (
               <>
-                {/* ── Desktop: 50/50 hero + offers row ── */}
-                <style>{`
-                  @media(min-width:1024px){
-                    .desktop-only { display: block !important; }
-                    .hero-offers-row { display: flex !important; }
-                    .mobile-offers { display: none !important; }
-                    .stats-strip { display: grid !important; }
-                  }
-                `}</style>
-
-                {/* Stats strip — desktop only */}
-                <div className="stats-strip">
-                  <StatsStrip />
-                </div>
-
-                {/* 50/50 row — hidden on mobile, shown on desktop */}
-                <div
-                  className="hero-offers-row"
-                  style={{
-                    display: 'none',
-                    gap: '20px',
-                    marginBottom: '28px',
-                    alignItems: 'stretch',
-                  }}
-                >
-                  {/* Left 50%: greeting hero */}
-                  <div style={{
-                    flex: 1,
-                    background: 'linear-gradient(135deg, #DC0C25 0%, #C50020 100%)',
-                    borderRadius: '20px',
-                    padding: '32px 28px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    minHeight: '200px',
-                  }}>
-                    {/* Background emoji watermark */}
-                    <div style={{
-                      position: 'absolute', right: '-8px', bottom: '-12px',
-                      fontSize: '110px', opacity: 0.12, lineHeight: 1,
-                      userSelect: 'none', pointerEvents: 'none',
-                    }}>🍔</div>
-
-                    <p style={{
-                      fontSize: '13px', color: 'rgba(255,255,255,0.75)',
-                      margin: '0 0 8px', fontWeight: 600,
-                      letterSpacing: '0.3px',
-                    }}>
-                      Good {getTimeOfDay()}, {userProfile.subLocation} 👋
-                    </p>
-                    <h1 style={{
-                      fontSize: '26px', fontWeight: 900, color: 'white',
-                      margin: '0 0 20px', lineHeight: 1.25, letterSpacing: '-0.4px',
-                    }}>
-                      What are you craving today?
-                    </h1>
-
-                    {/* Quick stat pills */}
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {[['🚀', '30–40 min'], ['🍽️', '50+ outlets'], ['🎁', 'Safe delivery']].map(([icon, label]) => (
-                        <div key={label} style={{
-                          display: 'flex', alignItems: 'center', gap: '5px',
-                          backgroundColor: 'rgba(255,255,255,0.18)',
-                          borderRadius: '8px', padding: '5px 10px',
-                          fontSize: '12px', fontWeight: 600, color: 'white',
-                        }}>
-                          <span>{icon}</span>
-                          <span>{label}</span>
-                        </div>
-                      ))}
-                    </div>
+                {/* Desktop only: animated hero card beside the banner slider */}
+                <div className="hero-offers-row home-section">
+                  <div className="hero-card-frame">
+                    <HeroCard onCategoryClick={handleCategoryClick} />
                   </div>
-
-                  {/* Right 50%: offer slider */}
                   {offers.length > 0 && (
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div>
                       <OfferSlider offers={offers} />
                     </div>
                   )}
                 </div>
 
-                {/* Mobile-only offers */}
+                {/* 1) Offer cards row (created in the admin app) */}
+                {promoCards.length > 0 && (
+                  <div className="home-section">
+                    <PromoCardsRow
+                      cards={promoCards}
+                      onCardClick={handlePromoCardClick}
+                      onSeeAllClick={handleSeeAllOffers}
+                    />
+                  </div>
+                )}
+
+                {/* 2) Categories */}
+                <div className="home-section">
+                  <SectionHeader title="Categories" Icon={Squares2X2Icon} />
+                  <CategorySection onCategoryClick={handleCategoryClick} />
+                </div>
+
+                {/* 3) Banner slider (phones; on desktop it sits beside the hero card) */}
                 {offers.length > 0 && (
-                  <div className="mobile-offers" style={{ marginBottom: '20px' }}>
-                    <SectionHeader title="Announcements" />
+                  <div className="mobile-offers home-section">
                     <OfferSlider offers={offers} />
                   </div>
                 )}
 
-                {/* Categories */}
-                <div className="section-divider" style={{ marginBottom: '24px' }}>
-                  <SectionHeader title="Browse Categories" />
-                  <CategorySection onCategoryClick={handleCategoryClick} />
-                </div>
-
-                {/* Restaurants & Shops grid */}
+                {/* 4) Restaurants */}
                 <div>
                   <SectionHeader
-                    title="Restaurants & Shops"
+                    title="Restaurants"
+                    Icon={BuildingStorefrontIcon}
                     count={combinedRestaurants.length || null}
                   />
                   {combinedRestaurants.length === 0 ? (
@@ -548,17 +437,10 @@ function HomePageContent() {
                       </p>
                     </div>
                   ) : (
-                    <div
-                      className="restaurant-grid"
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                        gap: '16px',
-                      }}
-                    >
+                    <div className="restaurant-grid">
                       {combinedRestaurants.map((res) => (
-                        <RestaurantCardWithStatus
-                          key={res.id}
+                        <RestaurantCard
+                          key={`${res.type}-${res.id}`}
                           restaurant={res}
                           onClick={() => handleItemClick(res)}
                         />
@@ -574,7 +456,9 @@ function HomePageContent() {
           <SearchResultsList
             results={searchResults}
             onRestaurantClick={(id, name) => {
-              const item = combinedRestaurants.find(r => r.id === id);
+              // The results list does not always pass the id, so fall back to the name.
+              const item = combinedRestaurants.find((r) => r.id === id)
+                || combinedRestaurants.find((r) => r.name === name);
               if (item) handleItemClick(item);
             }}
             onSubCategoryClick={handleSubCategorySearchClick}
@@ -676,14 +560,6 @@ function HomePageContent() {
       </div>
     </>
   );
-}
-
-// --- Utility ---
-function getTimeOfDay() {
-  const h = new Date().getHours();
-  if (h < 12) return 'morning';
-  if (h < 17) return 'afternoon';
-  return 'evening';
 }
 
 export default function HomePage() {
