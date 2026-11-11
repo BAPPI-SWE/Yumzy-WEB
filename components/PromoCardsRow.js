@@ -4,6 +4,7 @@
 // They are created in the admin app (Offers tab > Offer Cards) and stored in the
 // "promo_cards" collection. Tapping a card opens its restaurant.
 
+import { useEffect, useState } from 'react';
 import { db } from '../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -12,6 +13,26 @@ export const MAX_HOME_PROMO_CARDS = 6;
 
 // Small tag in the bottom-left corner of every card. Set to '' to hide it.
 const PROMO_CARD_TAG_TEXT = 'Order Now';
+
+// ─── Intro animation ─────────────────────────────────────────────
+// When the home page opens, the mascot walks in from the right, says two
+// short lines, then pulls the offer cards in with a rope and walks off.
+//
+// Picture: /public/mascot/offer_mascot.png (he faces right in the file;
+// the page flips him so he walks to the left).
+const MASCOT_SRC = '/mascot/offer_mascot.png';
+const INTRO_TEXT_1 = 'অফার খুঁজছো?';   // shown while he stands
+const INTRO_TEXT_2 = 'এই নাও!';         // shown while he pulls
+
+// Timing, in milliseconds
+const INTRO_START_DELAY = 250; // short wait after the cards have loaded
+const INTRO_ENTER_MS = 650;    // mascot walks in
+const INTRO_TALK_MS = 1250;    // he stands and "talks"
+const INTRO_PULL_MS = 1400;    // he pulls the cards in and walks off
+
+// The intro plays once each time the site is opened,
+// not again when the user comes back to the home page.
+let promoIntroPlayed = false;
 
 // Loads all active offer cards, lowest priority number first.
 // Never throws: if the cards cannot be read, it returns an empty list
@@ -50,6 +71,15 @@ export function promoCardHref(card) {
 export function PromoCardStyles() {
   return (
     <style>{`
+      /* The stage is the window everything moves inside. It runs to the screen
+         edges on phones, and hides the cards while they wait off-screen. */
+      .fd-promo-stage {
+        position: relative;
+        overflow: hidden;
+        margin: 0 -16px;
+        --row-pad: 16px;        /* empty space before the first card */
+        --pull-extra: 24px;     /* how far past the edge the cards wait */
+      }
       .fd-promo-row {
         display: flex;
         gap: 10px;
@@ -57,9 +87,91 @@ export function PromoCardStyles() {
         scroll-snap-type: x proximity;
         scrollbar-width: none;
         -ms-overflow-style: none;
-        /* let the row run to the screen edges on phones */
-        margin: 0 -16px;
-        padding: 2px 16px 4px;
+        padding: 4px var(--row-pad) 6px;
+      }
+
+      /* ── Intro: where things are in each phase ──
+         idle / enter / talk : cards wait just past the right edge
+         pull                : cards slide to their place; the mascot layer slides
+                               the same distance with the same timing, so the rope
+                               between them keeps its length
+         done                : mascot removed, cards in place                      */
+      .fd-intro-idle .fd-promo-row,
+      .fd-intro-enter .fd-promo-row,
+      .fd-intro-talk .fd-promo-row {
+        transform: translateX(calc(100% + var(--pull-extra)));
+      }
+      .fd-intro-pull .fd-promo-row {
+        transform: translateX(0);
+        transition: transform ${INTRO_PULL_MS}ms cubic-bezier(0.5, 0, 0.2, 1);
+      }
+      .fd-mascot-layer {
+        position: absolute; inset: 0;
+        z-index: 2;
+        pointer-events: none;
+      }
+      .fd-intro-pull .fd-mascot-layer {
+        transform: translateX(calc(-100% - var(--pull-extra)));
+        transition: transform ${INTRO_PULL_MS}ms cubic-bezier(0.5, 0, 0.2, 1);
+      }
+      /* The mascot stands near the right edge. Before "enter" he is off-screen. */
+      .fd-mascot {
+        position: absolute;
+        right: 8px; bottom: 4px;
+        height: calc(100% - 8px);
+        aspect-ratio: 414 / 540;
+        transform: translateX(170%);
+      }
+      .fd-intro-enter .fd-mascot,
+      .fd-intro-talk .fd-mascot,
+      .fd-intro-pull .fd-mascot {
+        transform: translateX(0);
+        transition: transform ${INTRO_ENTER_MS}ms cubic-bezier(0.2, 0.7, 0.3, 1);
+      }
+      .fd-mascot-body { width: 100%; height: 100%; transform-origin: 50% 90%; }
+      .fd-mascot-body img {
+        width: 100%; height: 100%; display: block;
+        transform: scaleX(-1); /* flip: he walks to the left */
+      }
+      /* Walking: he rocks from side to side. Standing: a small bounce. */
+      @keyframes fdMascotWalk {
+        0%, 100% { transform: rotate(-5deg) translateY(0); }
+        50%      { transform: rotate(5deg) translateY(-3%); }
+      }
+      @keyframes fdMascotIdle {
+        0%, 100% { transform: translateY(0) scale(1, 1); }
+        50%      { transform: translateY(-2%) scale(1.02, 0.98); }
+      }
+      .fd-intro-enter .fd-mascot-body,
+      .fd-intro-pull .fd-mascot-body { animation: fdMascotWalk 0.36s ease-in-out infinite; }
+      .fd-intro-talk .fd-mascot-body { animation: fdMascotIdle 0.6s ease-in-out infinite; }
+
+      /* Rope: from the rope end on his back to the left edge of the first card */
+      .fd-mascot-rope {
+        position: absolute;
+        left: 86%; top: 44%;
+        width: calc(14% + 8px + var(--pull-extra) + var(--row-pad) + 2px);
+        height: 32%;
+        overflow: visible;
+      }
+
+      /* Speech bubble, to the left of his face */
+      @keyframes fdBubblePop {
+        0%   { opacity: 0; transform: scale(0.5); }
+        70%  { opacity: 1; transform: scale(1.08); }
+        100% { opacity: 1; transform: scale(1); }
+      }
+      .fd-mascot-bubble {
+        position: absolute;
+        right: 84%; top: 8%;
+        white-space: nowrap;
+        background-color: white; color: #1C1C1E;
+        font-size: 14px; font-weight: 700; line-height: 20px;
+        padding: 6px 12px;
+        border-radius: 14px 14px 4px 14px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+        transform-origin: 100% 100%;
+        animation: fdBubblePop 0.3s cubic-bezier(0.3, 1.4, 0.5, 1) both;
       }
       .fd-promo-row::-webkit-scrollbar { display: none; }
       .fd-promo-row > * { flex: 0 0 136px; scroll-snap-align: start; }
@@ -93,7 +205,9 @@ export function PromoCardStyles() {
       }
 
       @media (min-width: 1024px) {
-        .fd-promo-row { gap: 16px; margin: 0; padding: 4px 0 8px; }
+        .fd-promo-stage { margin: 0; --row-pad: 0px; }
+        .fd-promo-row { gap: 16px; padding: 6px 0 10px; }
+        .fd-mascot-bubble { font-size: 17px; line-height: 24px; padding: 8px 16px; }
         .fd-promo-row > * { flex-basis: 210px; }
         .fd-promo-tile { border-radius: 20px; }
         .fd-promo-tag { left: 12px; bottom: 12px; font-size: 12px; line-height: 16px; padding: 4px 6px 4px 12px; }
@@ -155,14 +269,105 @@ function SeeAllOffersTile({ extraCount, onClick }) {
   );
 }
 
+// Runs the intro once. Returns the current phase:
+// 'idle' -> 'enter' -> 'talk' -> 'pull' -> 'done'
+function usePromoIntro(hasCards) {
+  const [phase, setPhase] = useState(() => (promoIntroPlayed ? 'done' : 'idle'));
+
+  useEffect(() => {
+    if (!hasCards || promoIntroPlayed) return undefined;
+
+    const finish = () => {
+      promoIntroPlayed = true;
+      setPhase('done');
+    };
+
+    // People who switch off animations in their device settings just get the cards.
+    const reduceMotion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      finish();
+      return undefined;
+    }
+
+    const timers = [];
+    let cancelled = false;
+    const at = (ms, action) => timers.push(setTimeout(() => !cancelled && action(), ms));
+
+    // Start only when the picture is ready. If it cannot load, skip the intro.
+    const picture = new window.Image();
+    picture.onload = () => {
+      if (cancelled) return;
+      const t1 = INTRO_START_DELAY;
+      const t2 = t1 + INTRO_ENTER_MS;
+      const t3 = t2 + INTRO_TALK_MS;
+      const t4 = t3 + INTRO_PULL_MS + 100;
+      at(t1, () => setPhase('enter'));
+      at(t2, () => setPhase('talk'));
+      at(t3, () => setPhase('pull'));
+      at(t4, finish);
+    };
+    picture.onerror = () => !cancelled && finish();
+    picture.src = MASCOT_SRC;
+
+    // Leaving the page in the middle of the intro: stop the timers.
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
+  }, [hasCards]);
+
+  return phase;
+}
+
+function PromoMascot({ phase }) {
+  const isTalking = phase === 'talk' || phase === 'pull';
+  const text = phase === 'pull' ? INTRO_TEXT_2 : INTRO_TEXT_1;
+
+  return (
+    <div className="fd-mascot-layer" aria-hidden="true">
+      <div className="fd-mascot">
+        {/* Rope (drawn first, so it goes behind him) */}
+        <svg className="fd-mascot-rope" viewBox="0 0 100 40" preserveAspectRatio="none">
+          <path
+            d="M0,24 Q48,38 100,8"
+            fill="none" stroke="#8A5A2B" strokeWidth="6" strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          <path
+            d="M0,24 Q48,38 100,8"
+            fill="none" stroke="#D9AE72" strokeWidth="3" strokeLinecap="round"
+            strokeDasharray="5 5"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+
+        <div className="fd-mascot-body">
+          <img src={MASCOT_SRC} alt="" />
+        </div>
+
+        {/* key = text: the bubble pops again when the words change */}
+        {isTalking && (
+          <div key={text} className="fd-mascot-bubble">{text}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function PromoCardsRow({ cards, onCardClick, onSeeAllClick }) {
-  if (!cards || cards.length === 0) return null;
+  const hasCards = !!cards && cards.length > 0;
+  const phase = usePromoIntro(hasCards);
+
+  if (!hasCards) return null;
   const visibleCards = cards.slice(0, MAX_HOME_PROMO_CARDS);
   const extraCount = cards.length - visibleCards.length;
 
   return (
-    <>
+    <div className={`fd-promo-stage fd-intro-${phase}`}>
       <PromoCardStyles />
+      {phase !== 'done' && <PromoMascot phase={phase} />}
       <div className="fd-promo-row">
         {visibleCards.map((card) => (
           <div key={card.id}>
@@ -176,6 +381,6 @@ export default function PromoCardsRow({ cards, onCardClick, onSeeAllClick }) {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
