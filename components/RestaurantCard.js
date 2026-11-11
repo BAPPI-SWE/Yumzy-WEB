@@ -8,8 +8,21 @@ import { HeartIcon as HeartOutline, ClockIcon } from '@heroicons/react/24/outlin
 import { HeartIcon as HeartSolid, CheckBadgeIcon, StarIcon } from '@heroicons/react/24/solid';
 
 // Shown when a restaurant has no "deliveryTime" field in Firestore.
-// Set this to your real typical delivery time.
-const DEFAULT_DELIVERY_TIME = '20–30 min';
+// Each restaurant gets one of these, picked from its id, so the same restaurant
+// always shows the same time. Same list and same rule as the Android app,
+// so the app and the website show the same time for a restaurant.
+const DEFAULT_DELIVERY_TIMES = ['30–40 min', '30–45 min', '35–45 min', '35–40 min'];
+
+// Same result as Kotlin's String.hashCode() + Math.floorMod in the app
+function defaultDeliveryTimeFor(restaurantId) {
+  let hash = 0;
+  const id = String(restaurantId || '');
+  for (let i = 0; i < id.length; i++) {
+    hash = (Math.imul(31, hash) + id.charCodeAt(i)) | 0;
+  }
+  const n = DEFAULT_DELIVERY_TIMES.length;
+  return DEFAULT_DELIVERY_TIMES[((hash % n) + n) % n];
+}
 
 export function RestaurantCardStyles() {
   return (
@@ -169,7 +182,7 @@ export default function RestaurantCard({ restaurant, onClick }) {
           )}
           <ClockIcon style={{ width: '14px', height: '14px', color: '#6B6B70', flexShrink: 0 }} />
           <span style={{ marginLeft: '4px', fontWeight: 500 }}>
-            {restaurant.deliveryTime || DEFAULT_DELIVERY_TIME}
+            {restaurant.deliveryTime || defaultDeliveryTimeFor(restaurant.id)}
           </span>
         </div>
 
