@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, takeReturnPath, peekReturnPath, clearReturnPath } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 // Google icon component
@@ -34,6 +34,18 @@ export default function AuthScreen() {
   const [isEmailHovered, setIsEmailHovered] = useState(false);
   const [isSignUpHovered, setIsSignUpHovered] = useState(false);
 
+  // Was the guest sent here from checkout? Then say why login is needed.
+  const [isForCheckout, setIsForCheckout] = useState(false);
+  useEffect(() => {
+    setIsForCheckout((peekReturnPath() || '').startsWith('/checkout'));
+  }, []);
+
+  // "Continue browsing": back to the app without logging in
+  const handleContinueBrowsing = () => {
+    clearReturnPath();
+    router.push('/home');
+  };
+
   const handleGoogleSignIn = async () => {
     try {
       await googleSignIn();
@@ -46,7 +58,8 @@ export default function AuthScreen() {
   useEffect(() => {
     if (!loading && user) {
       if (profileExists) {
-        router.push('/home');
+        // Back to the page that asked for login (e.g. checkout), or home
+        router.push(takeReturnPath('/home'));
       } else {
         router.push('/details');
       }
@@ -83,7 +96,9 @@ export default function AuthScreen() {
           fontSize: '18px',
           color: 'rgba(255, 255, 255, 0.9)'
         }}>
-          Let&apos;s satisfy those cravings together!
+          {isForCheckout
+            ? 'Log in to place your order. Your cart is saved.'
+            : 'Let\u2019s satisfy those cravings together!'}
         </p>
         <div style={{
           marginTop: '32px',
@@ -225,9 +240,29 @@ export default function AuthScreen() {
                 </div>
               </a>
             </Link>
+
+            {/* NEW: browse without logging in */}
+            <button
+              type="button"
+              onClick={handleContinueBrowsing}
+              style={{
+                width: '100%',
+                marginTop: '14px',
+                padding: '10px',
+                background: 'none',
+                border: 'none',
+                color: '#6B7280',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Continue browsing without login
+            </button>
           </div>
         </div>
       </div>
     </div>
   );
-}
+}

@@ -185,8 +185,9 @@ export default function IndexPage() {
   const doRedirect = () => {
     if (redirected.current) return;
     redirected.current = true;
+    // Guests can browse too, so they also go to /home (login is asked at checkout)
     router.replace(
-      user ? (profileExists ? '/home' : '/details') : '/auth'
+      user && !profileExists ? '/details' : '/home'
     );
   };
 
@@ -224,4 +225,4 @@ export default function IndexPage() {
 
   // phase === 'redirect' — show spinner while auth + navigation completes
   return <RedirectSpinner />;
-}
+}

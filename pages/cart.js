@@ -1,5 +1,5 @@
-import ProtectedRoute from '../components/ProtectedRoute';
 import { useCart } from '../context/CartContext';
+import PublicRoute from '../components/PublicRoute';
 import { useRouter } from 'next/router';
 import { ShoppingCartIcon, PlusIcon, MinusIcon, TrashIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 
@@ -267,8 +267,8 @@ function CartPage() {
 // Wrap the page with ProtectedRoute
 export default function Cart() {
   return (
-    <ProtectedRoute>
+    <PublicRoute>{/* open to guests: login is asked only at checkout */}
       <CartPage />
-    </ProtectedRoute>
+    </PublicRoute>
   );
-}
+}

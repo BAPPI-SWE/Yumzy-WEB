@@ -12,7 +12,9 @@ export default function LoadingSpinner() {
       minHeight: '100vh',
       backgroundColor: '#fff',
     }}>
-      <style>{`
+      {/* dangerouslySetInnerHTML: the server and the browser then write this CSS
+          exactly the same way, which avoids a "did not match" hydration error */}
+      <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=Keania+One&display=swap');
 
         @keyframes foodish-pulse {
@@ -78,7 +80,7 @@ export default function LoadingSpinner() {
           text-transform: uppercase;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
-      `}</style>
+      ` }} />
 
       <span className="foodish-logo-text">FOODISH</span>
 
@@ -95,4 +97,4 @@ export default function LoadingSpinner() {
       <p className="foodish-tagline">Loading your experience</p>
     </div>
   );
-}
+}

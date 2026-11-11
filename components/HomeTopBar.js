@@ -58,6 +58,8 @@ export default function HomeTopBar({
   onNotificationClick, onFavoriteClick,
   onCategoryClick, // (categoryId, categoryName) => void, called when the banner is tapped
   hideBanner = false, // true while search results are showing
+  isGuest = false,    // true when nobody is logged in
+  onLoginClick,       // guest taps "Log in"
 }) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
@@ -65,9 +67,11 @@ export default function HomeTopBar({
   const slideIndex = useHeroSlide();
   const slide = homeCategories[slideIndex];
 
-  const locationText = userProfile
-    ? [userProfile.subLocation, userProfile.baseLocation].filter(Boolean).join(', ') || 'Set your location'
-    : '...';
+  const locationText = isGuest
+    ? 'All areas · Log in'
+    : userProfile
+      ? [userProfile.subLocation, userProfile.baseLocation].filter(Boolean).join(', ') || 'Set your location'
+      : '...';
 
   return (
     <>
@@ -111,18 +115,28 @@ export default function HomeTopBar({
           </span>
         </div>
 
-        {/* Location pill */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          backgroundColor: '#FEF2F2', borderRadius: '8px',
-          padding: '6px 14px', flexShrink: 0,
-          border: '1px solid #FECDD3',
-        }}>
+        {/* Location pill (a guest sees "All areas" and can tap it to log in) */}
+        <div
+          onClick={isGuest ? onLoginClick : undefined}
+          role={isGuest ? 'button' : undefined}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            backgroundColor: '#FEF2F2', borderRadius: '8px',
+            padding: '6px 14px', flexShrink: 0,
+            border: '1px solid #FECDD3',
+            cursor: isGuest ? 'pointer' : 'default',
+          }}
+        >
           <MapPinIcon style={{ width: '16px', height: '16px', color: '#DC0C25', flexShrink: 0 }} />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '11px', color: '#DC0C25', fontWeight: 600, lineHeight: 1.2 }}>
-              {userProfile?.baseLocation || 'Loading...'}
+              {isGuest ? 'All areas' : (userProfile?.baseLocation || 'Loading...')}
             </span>
+            {isGuest && (
+              <span style={{ fontSize: '12px', color: '#374151', fontWeight: 600, lineHeight: 1.2 }}>
+                Log in for your location
+              </span>
+            )}
             {userProfile?.subLocation && (
               <span style={{ fontSize: '12px', color: '#374151', fontWeight: 600, lineHeight: 1.2 }}>
                 {userProfile.subLocation}
@@ -180,7 +194,11 @@ export default function HomeTopBar({
             }}>
               <MapPinIcon style={{ width: '18px', height: '18px', color: 'white' }} />
             </div>
-            <div style={{ minWidth: 0, flex: 1 }}>
+            <div
+              onClick={isGuest ? onLoginClick : undefined}
+              role={isGuest ? 'button' : undefined}
+              style={{ minWidth: 0, flex: 1, cursor: isGuest ? 'pointer' : 'default' }}
+            >
               <p style={{ fontSize: '10px', lineHeight: '12px', color: 'rgba(255,255,255,0.85)', margin: 0 }}>
                 Deliver to
               </p>

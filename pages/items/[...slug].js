@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
+import PublicRoute from '../../components/PublicRoute';
 import { useRouter } from 'next/router';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import ProtectedRoute from '../../components/ProtectedRoute';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { useCart } from '../../context/CartContext';
 import {
@@ -718,7 +718,7 @@ export default function ItemGridPage() {
   const topBarSolid = !isRestaurantPage || isScrolled;
 
   return (
-    <ProtectedRoute>
+    <PublicRoute>{/* open to guests: login is asked only at checkout */}
       <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFB' }}>
         <ItemPageStyles />
 
@@ -898,6 +898,6 @@ export default function ItemGridPage() {
 
         {selectedItem && <ItemDetailModal item={selectedItem} onClose={handleCloseModal} />}
       </div>
-    </ProtectedRoute>
+    </PublicRoute>
   );
 }

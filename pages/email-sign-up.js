@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, takeReturnPath } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { auth } from '../firebase/config';
 import { updateProfile } from 'firebase/auth';
@@ -54,7 +54,8 @@ export default function EmailSignUp() {
   useEffect(() => {
     if (!loading && user) {
       if (profileExists) {
-        router.push('/home');
+        // Back to the page that asked for login (e.g. checkout), or home
+        router.push(takeReturnPath('/home'));
       } else {
         router.push('/details');
       }
@@ -204,4 +205,4 @@ export default function EmailSignUp() {
       </form>
     </div>
   );
-}
+}

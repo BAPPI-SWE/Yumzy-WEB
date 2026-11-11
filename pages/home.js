@@ -6,10 +6,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import ProtectedRoute from '../components/ProtectedRoute';
 import { db } from '../firebase/config';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import LoadingSpinner from '../components/LoadingSpinner';
+import PublicRoute from '../components/PublicRoute';
 import { useRouter } from 'next/router';
 import { Squares2X2Icon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 
@@ -31,6 +31,13 @@ async function batchInQuery(collectionRef, field, values) {
   );
   return snapshots.flatMap(snap => snap.docs);
 }
+
+// Logged in: only what is available in the user's location.
+// Guest (location = null): everything, from every location.
+const byLocation = (collectionName, field, location) =>
+  location
+    ? query(collection(db, collectionName), where(field, 'array-contains', location))
+    : collection(db, collectionName);
 
 // Reads the optional "rating" and "deliveryTime" fields of a restaurant.
 // A rating is shown only when a real number is saved in Firestore.
@@ -65,8 +72,10 @@ function SectionHeader({ title, count, Icon }) {
 
 // ─── Main Page Content ───────────────────────────────────────────
 function HomePageContent() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  // Guest = not logged in. Guests can browse everything; login is asked at checkout.
+  const isGuest = !authLoading && !user;
 
   const [userProfile, setUserProfile] = useState(null);
   const [offers, setOffers] = useState([]);
@@ -77,9 +86,14 @@ function HomePageContent() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAppDialog, setShowAppDialog] = useState(() =>
-    sessionStorage.getItem('appDialogDismissed') !== 'true'
-  );
+  // The "get the app" dialog. Read after the page loads in the browser:
+  // sessionStorage does not exist while Next.js pre-renders the page.
+  const [showAppDialog, setShowAppDialog] = useState(false);
+  useEffect(() => {
+    try {
+      setShowAppDialog(sessionStorage.getItem('appDialogDismissed') !== 'true');
+    } catch (e) { /* storage blocked: just don't show the dialog */ }
+  }, []);
 
   const handleCloseDialog = () => {
     sessionStorage.setItem('appDialogDismissed', 'true');
@@ -88,52 +102,56 @@ function HomePageContent() {
 
   // --- Offer cards (same for every location, so they load on their own) ---
   useEffect(() => {
-    if (!user) return undefined;
     let cancelled = false;
     loadPromoCards().then((cards) => {
       if (!cancelled) setPromoCards(cards);
     });
     return () => { cancelled = true; };
-  }, [user]);
+  }, []);
 
   // --- Fetch Data ---
   useEffect(() => {
-    if (!user) return;
+    // Wait until we know whether someone is logged in
+    if (authLoading) return;
 
     const fetchData = async () => {
       setIsLoadingData(true);
       setError('');
       let profile = null;
-      let userLocation = null;
+      let userLocation = null; // stays null for guests = no location filter
 
       try {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          const data = userDocSnap.data();
-          profile = {
-            baseLocation: data.baseLocation || 'Campus',
-            subLocation: data.subLocation || '',
-          };
-          setUserProfile(profile);
-          userLocation = profile.subLocation;
-        } else {
-          setError('User profile not found.');
-          setIsLoadingData(false);
-          return;
-        }
+        if (user) {
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            const data = userDocSnap.data();
+            profile = {
+              baseLocation: data.baseLocation || 'Campus',
+              subLocation: data.subLocation || '',
+            };
+            setUserProfile(profile);
+            userLocation = profile.subLocation;
+          } else {
+            setError('User profile not found.');
+            setIsLoadingData(false);
+            return;
+          }
 
-        if (!userLocation) {
-          setError('Please set your delivery location in your profile.');
-          setIsLoadingData(false);
-          return;
+          if (!userLocation) {
+            setError('Please set your delivery location in your profile.');
+            setIsLoadingData(false);
+            return;
+          }
+        } else {
+          setUserProfile(null);
         }
 
         const [offersSnap, restaurantsSnap, subCategoriesSnap, miniRestaurantsSnap] = await Promise.all([
-          getDocs(query(collection(db, 'offers'), where('availableLocations', 'array-contains', userLocation))),
-          getDocs(query(collection(db, 'restaurants'), where('deliveryLocations', 'array-contains', userLocation))),
-          getDocs(query(collection(db, 'store_sub_categories'), where('availableLocations', 'array-contains', userLocation))),
-          getDocs(query(collection(db, 'mini_restaurants'), where('availableLocations', 'array-contains', userLocation)))
+          getDocs(byLocation('offers', 'availableLocations', userLocation)),
+          getDocs(byLocation('restaurants', 'deliveryLocations', userLocation)),
+          getDocs(byLocation('store_sub_categories', 'availableLocations', userLocation)),
+          getDocs(byLocation('mini_restaurants', 'availableLocations', userLocation))
         ]);
 
         // Banners switched off in the admin app are skipped. Older banners have no
@@ -221,7 +239,7 @@ function HomePageContent() {
     };
 
     fetchData();
-  }, [user]);
+  }, [user, authLoading]);
 
   // --- Navigation (identical to original) ---
   const handleItemClick = (item) => {
@@ -290,7 +308,7 @@ function HomePageContent() {
   }
 
   const isSearching = searchResults !== null;
-  const showContent = !error && userProfile?.subLocation;
+  const showContent = !error && (isGuest || userProfile?.subLocation);
 
   // ─── RENDER ─────────────────────────────────────────────────────
   return (
@@ -362,6 +380,8 @@ function HomePageContent() {
           onFavoriteClick={handleFavoriteClick}
           onCategoryClick={handleCategoryClick}
           hideBanner={isSearching}
+          isGuest={isGuest}
+          onLoginClick={() => router.push('/auth')}
         />
 
         <div className="home-content-wrapper">
@@ -562,10 +582,11 @@ function HomePageContent() {
   );
 }
 
+// Open to everyone. Login is asked only when placing an order.
 export default function HomePage() {
   return (
-    <ProtectedRoute>
+    <PublicRoute>
       <HomePageContent />
-    </ProtectedRoute>
+    </PublicRoute>
   );
 }

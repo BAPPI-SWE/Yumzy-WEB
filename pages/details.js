@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, takeReturnPath } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { db } from '../firebase/config';
 import { doc, setDoc, getDocs, collection } from 'firebase/firestore';
@@ -167,7 +167,8 @@ export default function UserDetails() {
         router.push('/auth');
       }
       if (user && profileExists) {
-        router.push('/home');
+        // Back to the page that asked for login (e.g. checkout), or home
+        router.push(takeReturnPath('/home'));
       }
     }
   }, [user, profileExists, loading, router]);
@@ -368,4 +369,4 @@ export default function UserDetails() {
       </form>
     </div>
   );
-}
+}

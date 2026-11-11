@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
+import PublicRoute from '../../../components/PublicRoute';
 import { useRouter } from 'next/router';
 import { db } from '../../../firebase/config';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import ProtectedRoute from '../../../components/ProtectedRoute';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import {
   ArrowLeftIcon,
@@ -307,8 +307,9 @@ const MiniRestaurantCard = ({ restaurant, onClick }) => {
 // --- Main Page Component ---
 export default function SubCategoryListPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { categoryId, categoryName: encodedName } = router.query;
+  // Guests (not logged in) see shops and sub-categories from every location.
   const categoryName = encodedName ? decodeURIComponent(encodedName) : 'Category';
 
   const [subCategories, setSubCategories] = useState([]);
@@ -330,16 +331,16 @@ export default function SubCategoryListPage() {
 
   // --- Fetch Data ---
   useEffect(() => {
-    if (!categoryId || !user) return;
+    if (!categoryId || authLoading) return;
 
     const fetchData = async () => {
       setIsLoading(true);
       setError('');
       
-      let location = userSubLocation;
+      let location = user ? userSubLocation : null;
 
-      // 1. Fetch Location
-      if (!location) {
+      // 1. Fetch Location (logged-in users only)
+      if (user && !location) {
         try {
           const userDocRef = doc(db, 'users', user.uid);
           const userDocSnap = await getDoc(userDocRef);
@@ -358,18 +359,25 @@ export default function SubCategoryListPage() {
         }
       }
 
-      if (!location) {
+      if (user && !location) {
         setError('Please set your delivery location in profile.');
         setIsLoading(false);
         return;
       }
 
+      // Logged in: only this location. Guest: everything.
+      const forLocation = (q) =>
+        location ? query(q, where('availableLocations', 'array-contains', location)) : q;
+
       try {
         // 2. Parallel Fetching
         const [announceSnap, subCatSnap, miniResSnap] = await Promise.all([
-          getDocs(query(collection(db, 'announce'), where('parentCategory', '==', categoryId), where('availableLocations', 'array-contains', location))),
-          getDocs(query(collection(db, 'store_sub_categories'), where('parentCategory', '==', categoryId), where('availableLocations', 'array-contains', location))),
-          getDocs(query(collection(db, 'mini_restaurants'), where('parentCategory', '==', categoryId), where('availableLocations', 'array-contains', location)))
+          // Announcements are written for one location, so guests don't get them
+          location
+            ? getDocs(query(collection(db, 'announce'), where('parentCategory', '==', categoryId), where('availableLocations', 'array-contains', location)))
+            : Promise.resolve({ docs: [] }),
+          getDocs(forLocation(query(collection(db, 'store_sub_categories'), where('parentCategory', '==', categoryId)))),
+          getDocs(forLocation(query(collection(db, 'mini_restaurants'), where('parentCategory', '==', categoryId))))
         ]);
 
         // 3. Announcements
@@ -433,7 +441,7 @@ export default function SubCategoryListPage() {
     };
 
     fetchData();
-  }, [categoryId, user, userSubLocation]);
+  }, [categoryId, user, authLoading, userSubLocation]);
 
   // --- Handlers ---
   const handleSubCategoryClick = (name) => {
@@ -447,7 +455,7 @@ export default function SubCategoryListPage() {
   };
 
   return (
-    <ProtectedRoute>
+    <PublicRoute>{/* open to guests: login is asked only at checkout */}
       <div style={{ minHeight: '100vh', backgroundColor: 'white', display: 'flex', flexDirection: 'column' }}>
         {/* Grocery order terms & conditions popup */}
         {showGroceryTerms && (
@@ -587,6 +595,6 @@ export default function SubCategoryListPage() {
           </>
         )}
       </div>
-    </ProtectedRoute>
+    </PublicRoute>
   );
-}
+}

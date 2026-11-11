@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
+import PublicRoute from '../../../../components/PublicRoute';
 import { useRouter } from 'next/router';
 import { db } from '../../../../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useCart } from '../../../../context/CartContext';
-import ProtectedRoute from '../../../../components/ProtectedRoute';
 import LoadingSpinner from '../../../../components/LoadingSpinner';
 import { ArrowLeftIcon, PlusIcon, MinusIcon, ShoppingCartIcon, CheckCircleIcon, TagIcon, NoSymbolIcon } from '@heroicons/react/24/solid';
 
@@ -276,7 +276,7 @@ export default function PreOrderCategoryMenuPage() {
   };
 
   return (
-    <ProtectedRoute>
+    <PublicRoute>{/* open to guests: login is asked only at checkout */}
       <div style={{
         minHeight: '100vh',
         backgroundColor: '#F9FAFB',
@@ -417,6 +417,6 @@ export default function PreOrderCategoryMenuPage() {
           totalItems={currentTotalItems}
         />
       </div>
-    </ProtectedRoute>
+    </PublicRoute>
   );
-}
+}

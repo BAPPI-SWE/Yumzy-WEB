@@ -5,9 +5,9 @@
 // Tapping a card opens the restaurant that the offer belongs to.
 
 import { useEffect, useState } from 'react';
+import PublicRoute from '../components/PublicRoute';
 import { useRouter } from 'next/router';
 import { ArrowLeftIcon, TagIcon } from '@heroicons/react/24/solid';
-import ProtectedRoute from '../components/ProtectedRoute';
 import { loadPromoCards, promoCardHref, PromoCardStyles, PromoCardTile } from '../components/PromoCardsRow';
 
 function AllOffersContent() {
@@ -107,8 +107,8 @@ function AllOffersContent() {
 
 export default function AllOffersPage() {
   return (
-    <ProtectedRoute>
+    <PublicRoute>{/* open to guests: login is asked only at checkout */}
       <AllOffersContent />
-    </ProtectedRoute>
+    </PublicRoute>
   );
 }

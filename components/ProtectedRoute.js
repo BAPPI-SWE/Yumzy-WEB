@@ -1,7 +1,7 @@
 // ProtectedRoute.js
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, saveReturnPath } from '../context/AuthContext';
 
 export default function ProtectedRoute({ children }) {
   const { user, profileExists, loading } = useAuth();
@@ -10,8 +10,11 @@ export default function ProtectedRoute({ children }) {
   useEffect(() => {
     if (!loading) {
       if (!user) {
+        // Come back to this page after login (e.g. checkout)
+        saveReturnPath(router.asPath);
         router.push('/auth');
       } else if (!profileExists) {
+        saveReturnPath(router.asPath);
         router.push('/details');
       }
     }
@@ -51,4 +54,4 @@ export default function ProtectedRoute({ children }) {
   }
 
   return children;
-}
+}
